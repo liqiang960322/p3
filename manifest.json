@@ -1,0 +1,25 @@
+{
+  "name": "排列3预测分析系统",
+  "short_name": "P3预测",
+  "description": "基于历史数据的排列3统计分析与预测系统，支持自动获取最新150期数据、10组号码预测、5个胆码、4组双飞胆",
+  "start_url": "/排列3预测分析系统.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1923",
+  "theme_color": "#00b4ff",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
