@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="P3预测">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<title>排列3 历史数据统计分析系统</title>
+<style>
+:root {
+  --bg: #0f1923;
+  --bg2: #1a2a3a;
+  --card: #152030;
+  --border: rgba(0,180,255,0.15);
+  --cyan: #00b4ff;
+  --green: #00e676;
+  --red: #ff5252;
+  --orange: #ff9100;
+  --yellow: #ffd600;
+  --purple: #b388ff;
+  --text: #e0eaff;
+  --dim: #6080a0;
+  --gold: #ffd700;
+  --silver: #c0c0c0;
+  --bronze: #cd7f32;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 16px;
+}
+
+/* ===== 头部 ===== */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.header::before {
+  content: ''; position: absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--cyan));
+}
+.header-left { display:flex; align-items:center; gap:12px; }
+.logo {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: bold; color: #fff;
+}
+.header h1 { font-size: 18px; }
+.header h1 span { color: var(--cyan); }
+.header p { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+.warning-banner {
+  background: rgba(255,82,82,0.1);
+  border: 1px solid rgba(255,82,82,0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--red);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ===== 布局 ===== */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+
+/* ===== 左侧控制面板 ===== */
+.sidebar {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.panel-title {
+  font-size: 13px; font-weight: 600; color: var(--cyan);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.panel-title::before {
+  content: ''; width: 3px; height: 14px; background: var(--cyan); border-radius: 2px;
+}
+
+/* 数据导入 */
+textarea.data-input {
+  width: 100%; height: 120px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text);
+  font-size: 11px; font-family: monospace;
+  padding: 8px; resize: vertical; outline: none;
+}
+textarea.data-input:focus { border-color: var(--cyan); }
+.hint { font-size: 10px; color: var(--dim); margin-top: 4px; }
+
+.btn {
+  padding: 8px 16px; border: none; border-radius: 6px;
+  font-size: 12px; cursor: pointer; transition: all .2s;
+  font-family: inherit;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  color: #fff;
+}
+.btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-outline {
+  background: transparent; color: var(--cyan);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { background: rgba(0,180,255,0.1); }
+.btn-row { display: flex; gap: 8px; margin-top: 8px; }
+
+/* 最新号码球 */
+.recent-balls { display: flex; gap: 6px; align-items: center; }
+.ball {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; font-family: monospace;
+}
+.ball-red { background: linear-gradient(135deg, #ff5252, #d32f2f); color: #fff; }
+.ball-blue { background: linear-gradient(135deg, var(--cyan), #0077cc); color: #fff; }
+.ball-green { background: linear-gradient(135deg, var(--green), #00c853); color: #fff; }
+.ball-sm { width: 24px; height: 24px; font-size: 12px; }
+.recent-period { font-size: 10px; color: var(--dim); margin-top: 4px; }
+
+/* 统计概览 */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-box {
+  background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px 10px;
+  text-align: center;
+}
+.stat-label { font-size: 10px; color: var(--dim); }
+.stat-val { font-size: 18px; font-weight: 700; font-family: monospace; margin-top: 2px; }
+
+/* ===== 右侧内容 ===== */
+.content { display: flex; flex-direction: column; gap: 16px; }
+
+/* 预测结果卡 */
+.prediction-card {
+  background: linear-gradient(135deg, rgba(0,180,255,0.08), rgba(179,136,255,0.08));
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px; position: relative; overflow: hidden;
+}
+.prediction-card::before {
+  content: ''; position: absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--green));
+}
+.prediction-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.prediction-header h2 { font-size: 15px; }
+.prediction-header h2 span { color: var(--cyan); }
+.prediction-method {
+  font-size: 10px; color: var(--dim);
+  background: rgba(0,180,255,0.1); padding: 4px 12px;
+  border-radius: 12px; border: 1px solid var(--border);
+}
+
+/* 520组号码网格 */
+.num-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 8px;
+}
+.num-item {
+  background: rgba(0,180,255,0.08);
+  border: 1px solid rgba(0,180,255,0.15);
+  border-radius: 6px;
+  padding: 6px 4px;
+  text-align: center;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.num-item:hover {
+  background: rgba(0,180,255,0.2);
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+.num-item .num-rank {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 8px;
+  color: var(--dim);
+  font-weight: 400;
+}
+.num-item .num-prob {
+  font-size: 8px;
+  color: var(--dim);
+  font-weight: 400;
+  display: block;
+  margin-top: 1px;
+}
+.num-item.top10 { background: rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.3); }
+.num-item.top10 .num-prob { color: var(--gold); }
+
+/* 分页控制 */
+.grid-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--dim);
+}
+.grid-pagination button {
+  background: rgba(0,180,255,0.1);
+  border: 1px solid var(--border);
+  color: var(--cyan);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+}
+.grid-pagination button:hover { background: rgba(0,180,255,0.2); }
+.grid-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 分隔标签 */
+.section-divider {
+  display: flex; align-items: center; gap: 8px; margin: 16px 0 8px;
+}
+.section-divider span {
+  font-size: 11px; font-weight: 600; color: var(--cyan); white-space: nowrap;
+}
+.section-divider::before, .section-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* 胆码区域 - 金银铜 */
+.danma-section {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px dashed rgba(0,180,255,0.15);
+}
+.danma-title {
+  font-size: 13px; font-weight: 600; color: var(--gold);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.danma-title::before { content: ''; width: 3px; height: 14px; background: var(--gold); border-radius: 2px; }
+.danma-balls { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+.danma-ball {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; font-family: monospace; color: #fff;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.danma-ball.gold {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  box-shadow: 0 4px 20px rgba(255,215,0,0.4);
+}
+.danma-ball.silver {
+  background: linear-gradient(135deg, #e8e8e8, #a0a0a0);
+  box-shadow: 0 4px 20px rgba(192,192,192,0.3);
+}
+.danma-ball.bronze {
+  background: linear-gradient(135deg, #cd7f32, #8b4513);
+  box-shadow: 0 4px 20px rgba(205,127,50,0.3);
+}
+.danma-rank {
+  position: absolute; bottom: -20px; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.danma-ball.gold .danma-rank { color: var(--gold); }
+.danma-ball.silver .danma-rank { color: var(--silver); }
+.danma-ball.bronze .danma-rank { color: var(--bronze); }
+.danma-pct {
+  font-size: 9px; font-weight: 400; opacity: 0.85; margin-top: 2px;
+}
+.danma-note {
+  text-align: center; font-size: 10px; color: var(--dim); margin-top: 12px;
+}
+
+/* 双飞胆区域 */
+.shuangfei-section {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px dashed rgba(0,180,255,0.15);
+}
+.shuangfei-title {
+  font-size: 13px; font-weight: 600; color: var(--orange);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.shuangfei-title::before { content: ''; width: 3px; height: 14px; background: var(--orange); border-radius: 2px; }
+.shuangfei-list { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.shuangfei-card {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 18px;
+  display: flex; align-items: center; gap: 10px;
+  min-width: 140px;
+}
+.shuangfei-balls { display: flex; gap: 4px; align-items: center; }
+.shuangfei-ball {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; font-family: monospace; color: #fff;
+}
+.shuangfei-plus { font-size: 14px; color: var(--dim); }
+.shuangfei-info { display: flex; flex-direction: column; }
+.shuangfei-rank { font-size: 9px; color: var(--dim); }
+.shuangfei-type { font-size: 10px; color: var(--orange); font-weight: 600; }
+
+/* 4码/5码/6码分析 */
+.compound-section {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px dashed rgba(0,180,255,0.15);
+}
+.compound-title {
+  font-size: 13px; font-weight: 600; color: var(--purple);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+.compound-title::before { content: ''; width: 3px; height: 14px; background: var(--purple); border-radius: 2px; }
+.compound-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.compound-card {
+  background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.compound-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.compound-card.c4::before { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+.compound-card.c5::before { background: linear-gradient(90deg, var(--purple), var(--cyan)); }
+.compound-card.c6::before { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+.compound-label {
+  font-size: 12px; font-weight: 700; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.compound-card.c4 .compound-label { color: var(--cyan); }
+.compound-card.c5 .compound-label { color: var(--purple); }
+.compound-card.c6 .compound-label { color: var(--orange); }
+.compound-balls {
+  display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.compound-ball {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-family: monospace; color: #fff;
+}
+.compound-stats {
+  display: flex; justify-content: space-around;
+  font-size: 10px; color: var(--dim);
+  border-top: 1px solid rgba(0,180,255,0.1);
+  padding-top: 8px;
+}
+.compound-stats b { color: var(--text); font-family: monospace; }
+
+/* 复制按钮 */
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; border: 1px solid rgba(0,180,255,0.3);
+  border-radius: 16px; background: rgba(0,180,255,0.08);
+  color: var(--cyan); font-size: 11px; cursor: pointer;
+  font-family: inherit; transition: all .2s;
+  white-space: nowrap;
+}
+.copy-btn:hover { background: rgba(0,180,255,0.2); border-color: var(--cyan); }
+.copy-btn:active { transform: scale(0.95); }
+.copy-btn.copied { background: rgba(0,230,118,0.15); border-color: var(--green); color: var(--green); }
+.copy-btn-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.copy-btn-group { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+
+/* ===== 自定义滚动条 ===== */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(0,180,255,0.3); border-radius: 3px; }
+
+/* 形态分析 */
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.form-card {
+  background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; text-align: center; position: relative; overflow: hidden;
+}
+.form-card::before {
+  content: ''; position: absolute; top:0; left:0; right:0; height:3px;
+}
+.form-card.f6::before { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+.form-card.f3::before { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+.form-card.f1::before { background: linear-gradient(90deg, var(--red), var(--purple)); }
+.form-type { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.form-desc { font-size: 9px; color: var(--dim); margin-bottom: 10px; }
+.form-pct { font-size: 28px; font-weight: 800; font-family: monospace; }
+.form-cnt { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.form-bar {
+  height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 10px; overflow: hidden;
+}
+.form-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+.form-bar-fill.f6 { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+.form-bar-fill.f3 { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+.form-bar-fill.f1 { background: linear-gradient(90deg, var(--red), var(--purple)); }
+.form-recent { font-size: 9px; color: var(--dim); margin-top: 8px; }
+.form-recent b { color: var(--text); }
+.form-balls { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+.form-mini-ball {
+  width: 22px; height: 22px; border-radius: 50%; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-family: monospace;
+}
+
+/* 走势图 */
+.trend-chart { padding: 14px 16px; overflow-x: auto; }
+.trend-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.trend-table th {
+  padding: 4px 6px; color: var(--dim); font-weight: 500;
+  border-bottom: 1px solid var(--border); text-align: center; font-size: 9px;
+}
+.trend-table td { padding: 3px 6px; text-align: center; border-bottom: 1px solid rgba(0,180,255,0.05); }
+.trend-table td:first-child { color: var(--dim); font-size: 9px; }
+.trend-num {
+  display: inline-flex; width: 20px; height: 20px; border-radius: 50%;
+  align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; font-family: monospace;
+}
+
+/* ===== 移动端适配 ===== */
+@media screen and (max-width: 768px) {
+  body { padding: 8px; }
+  .header {
+    flex-direction: column; gap: 8px; padding: 12px;
+    text-align: center;
+  }
+  .header-left { flex-direction: column; gap: 8px; }
+  .header h1 { font-size: 15px; }
+  .header p { font-size: 10px; }
+  .warning-banner { font-size: 10px; padding: 6px 10px; flex-direction: column; gap: 4px; text-align: center; }
+
+  .layout { grid-template-columns: 1fr; }
+
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat-val { font-size: 15px; }
+
+  .panel { padding: 10px 12px; }
+  .panel-title { font-size: 12px; }
+
+  textarea.data-input { height: 80px; font-size: 10px; }
+
+  .btn { padding: 6px 12px; font-size: 11px; }
+
+  .prediction-header { flex-direction: column; gap: 6px; align-items: flex-start; }
+
+  .num-grid {
+    grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+    max-height: 350px;
+  }
+
+  .danma-ball { width: 52px; height: 52px; font-size: 20px; }
+  .danma-balls { gap: 14px; }
+
+  .compound-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+
+  .trend-table { font-size: 9px; }
+  .trend-num { width: 16px; height: 16px; font-size: 9px; }
+  .trend-table th, .trend-table td { padding: 2px 3px; }
+}
+
+@media screen and (max-width: 480px) {
+  .header h1 { font-size: 13px; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .danma-ball { width: 46px; height: 46px; font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 头部 -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">P3</div>
+    <div>
+      <h1>排列3 <span>历史数据统计分析系统</span></h1>
+      <p>基于频率统计 · 冷热遗漏 · 和值跨度 · 多维度分析</p>
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;color:var(--dim)">当前数据期数</div>
+    <div style="font-size:20px;font-weight:700;color:var(--cyan);font-family:monospace" id="dataCount">0 期</div>
+  </div>
+</div>
+
+<!-- 风险提示 -->
+<div class="warning-banner">
+  <span style="font-size:16px">⚠</span>
+  <span><strong>风险提示：</strong>排列3为随机开奖游戏，所有历史数据分析仅供统计参考，不构成任何投注建议。彩票有风险，投注需理性。</span>
+</div>
+
+<div class="layout">
+
+  <!-- ===== 左侧控制面板 ===== -->
+  <div class="sidebar">
+
+    <!-- 数据导入 -->
+    <div class="panel">
+      <div class="panel-title">数据导入</div>
+      <textarea class="data-input" id="dataInput" placeholder="每行一期，格式：期号 号码&#10;示例：&#10;2024232 387&#10;2024233 142&#10;2024234 905"></textarea>
+      <div class="hint">每行格式：期号 3位号码（空格分隔）</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="loadData()">导入分析</button>
+        <button class="btn btn-outline" onclick="loadSample()">载入示例</button>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;background:linear-gradient(135deg,var(--green),var(--cyan))" onclick="fetchLatest()" id="fetchBtn">
+        自动获取最近150期数据
+      </button>
+      <div id="fetchStatus" style="text-align:center;font-size:10px;margin-top:4px;display:none"></div>
+    </div>
+
+    <!-- 最近开奖 -->
+    <div class="panel">
+      <div class="panel-title">最近开奖</div>
+      <div id="recentDraw">
+        <div style="text-align:center;color:var(--dim);font-size:12px;padding:16px 0">暂无数据</div>
+      </div>
+    </div>
+
+    <!-- 统计概览 -->
+    <div class="panel">
+      <div class="panel-title">统计概览</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">平均和值</div>
+          <div class="stat-val" style="color:var(--green)" id="avgSum">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">平均跨度</div>
+          <div class="stat-val" style="color:var(--orange)" id="avgSpan">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">奇数占比</div>
+          <div class="stat-val" style="color:var(--purple)" id="oddRatio">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">大数占比</div>
+          <div class="stat-val" style="color:var(--cyan)" id="bigRatio">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 预测说明 -->
+    <div class="panel">
+      <div class="panel-title">预测说明</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.8">
+        <div style="color:var(--cyan);margin-bottom:4px">▸ 520组预测号码</div>
+        <div style="margin-bottom:8px">基于最近150期数据，通过百位、十位、个位频率加权计算，确定性生成前520注概率最高号码（数据不变则结果不变）</div>
+        <div style="color:var(--gold);margin-bottom:4px">▸ 金/银/铜 三胆</div>
+        <div style="margin-bottom:8px">基于最近25期数据综合频率与热度，选出最可能出现的3个数字</div>
+        <div style="color:var(--orange);margin-bottom:4px">▸ 4组双飞胆</div>
+        <div style="margin-bottom:8px">基于25期3个胆码推导的4组高概率数字对</div>
+        <div style="color:var(--purple);margin-bottom:4px">▸ 4码/5码/6码复式</div>
+        <div>基于25期频率排序，精选高概率数字组合</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 右侧内容区 ===== -->
+  <div class="content">
+
+    <!-- 预测结果 -->
+    <div class="prediction-card">
+      <div class="prediction-header">
+        <h2>预测分析 · <span>多维度统计参考</span></h2>
+        <span class="prediction-method" id="predMethodName">基于最近150期数据</span>
+      </div>
+      <div id="predictionResult">
+        <div style="text-align:center;color:var(--dim);padding:24px 0">
+          导入历史数据后自动生成预测分析<br>
+          <span style="font-size:10px;margin-top:4px;display:inline-block">520组号码 + 金银铜三胆 + 双飞胆 + 复式选号</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 形态分析 -->
+    <div class="panel">
+      <div class="panel-title">形态分析（组六 / 组三 / 豹子）</div>
+      <div id="formChart">
+        <div style="color:var(--dim);font-size:12px;text-align:center;padding:20px 0">暂无数据</div>
+      </div>
+    </div>
+
+    <!-- 走势图 -->
+    <div class="panel">
+      <div class="panel-title">近期开奖走势</div>
+      <div class="trend-chart" id="trendChart">
+        <div style="color:var(--dim);font-size:12px;text-align:center;padding:20px 0">暂无数据</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== 全局数据 =====
+let history = []; // [{period:'2024232', num:'387', d:[3,8,7]}, ...]
+let predictionCache = null; // 缓存预测结果，数据不变则不变
+
+// 颜色配置
+const digitColors = ['#ff5252','#ff9100','#ffd600','#00e676','#00b4ff','#7c4dff','#e040fb','#f06292','#8d6e63','#90a4ae'];
+
+// ===== 自动获取最新150期数据 =====
+function fetchLatest() {
+  const btn = document.getElementById('fetchBtn');
+  const status = document.getElementById('fetchStatus');
+  btn.disabled = true;
+  btn.textContent = '正在获取数据...';
+  status.style.display = 'block';
+  status.style.color = 'var(--cyan)';
+  status.textContent = '正在获取最新150期排列3开奖数据...';
+
+  const targetApi = 'https://api.huiniao.top/interface/home/lotteryHistory?type=pls&page=1&limit=150';
+  const localApi = '/api/p3data';
+  const corsProxies = [
+    url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    url => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
+  ];
+
+  function parseRawData(raw) {
+    const items = raw.data && raw.data.data && raw.data.data.list ? raw.data.data.list : [];
+    if(items.length === 0) throw new Error('API返回数据为空');
+    return items.map(item => ({
+      period: String(item.code || ''),
+      num: String(item.one || 0) + String(item.two || 0) + String(item.three || 0),
+      date: item.day || ''
+    }));
+  }
+
+  function tryDirectAPI() {
+    status.textContent = '尝试直连API...';
+    return fetch(targetApi)
+      .then(r => r.json())
+      .then(raw => processFetchedData(parseRawData(raw), btn, status));
+  }
+
+  function tryCORSProxy(idx) {
+    if(idx >= corsProxies.length) throw new Error('所有CORS代理均失败');
+    status.textContent = '尝试CORS代理(' + (idx+1) + '/' + corsProxies.length + ')...';
+    return fetch(corsProxies[idx](targetApi))
+      .then(r => r.json())
+      .then(raw => processFetchedData(parseRawData(raw), btn, status));
+  }
+
+  // 1. 先试本地API（同一服务器时）
+  fetch(localApi)
+    .then(r => r.json())
+    .then(data => {
+      if(data.success && data.data && data.data.length > 0) {
+        processFetchedData(data.data, btn, status);
+      } else {
+        throw new Error('本地API无效');
+      }
+    })
+    .catch(() => tryDirectAPI()
+      .catch(() => tryCORSProxy(0)
+        .catch(() => tryCORSProxy(1)
+          .catch(() => tryCORSProxy(2)
+            .catch(err => {
+              btn.disabled = false;
+              btn.textContent = '自动获取最近150期数据';
+              status.style.color = 'var(--red)';
+              status.textContent = '获取失败: ' + err.message + '（可使用手动导入）';
+            })
+          )
+        )
+      )
+    );
+}
+
+function processFetchedData(items, btn, status) {
+  // 按期号从旧到新排序
+  items.sort((a, b) => {
+    const pa = parseInt(a.period) || 0;
+    const pb = parseInt(b.period) || 0;
+    return pa - pb;
+  });
+
+  history = items.map(item => ({
+    period: item.period,
+    num: item.num.padStart(3, '0').slice(-3),
+    d: [parseInt(item.num[0]||'0'), parseInt(item.num[1]||'0'), parseInt(item.num[2]||'0')]
+  })).filter(h => /^\d{3}$/.test(h.num));
+
+  if(history.length === 0) {
+    btn.disabled = false;
+    btn.textContent = '自动获取最近150期数据';
+    status.style.color = 'var(--red)';
+    status.textContent = '解析数据失败';
+    return;
+  }
+
+  // 同步到文本框
+  const text = history.map(h => h.period + ' ' + h.num).join('\n');
+  document.getElementById('dataInput').value = text;
+  document.getElementById('dataCount').textContent = history.length + ' 期';
+
+  btn.disabled = false;
+  btn.textContent = '重新获取最新数据';
+  status.style.color = 'var(--green)';
+  status.textContent = '成功获取 ' + history.length + ' 期数据（' +
+    history[0].period + ' ~ ' + history[history.length-1].period + '）';
+
+  // 清除缓存，重新计算
+  predictionCache = null;
+  renderAll();
+}
+
+// ===== 载入示例数据 =====
+function loadSample() {
+  const sample = [];
+  let base = 2024000;
+  // 生成150期模拟数据
+  for(let i=0; i<150; i++) {
+    const period = String(base + 232 + i);
+    const n = String(Math.floor(Math.random()*1000)).padStart(3,'0');
+    sample.push(period + ' ' + n);
+  }
+  document.getElementById('dataInput').value = sample.join('\n');
+  loadData();
+}
+
+// ===== 导入数据 =====
+function loadData() {
+  const text = document.getElementById('dataInput').value.trim();
+  if(!text) { alert('请输入数据'); return; }
+  history = [];
+  const lines = text.split('\n');
+  for(const line of lines) {
+    const parts = line.trim().split(/[\s,，\t]+/);
+    if(parts.length >= 2) {
+      const period = parts[0];
+      const num = parts[1].padStart(3,'0').slice(-3);
+      if(/^\d{3}$/.test(num)) {
+        history.push({
+          period: period,
+          num: num,
+          d: [parseInt(num[0]), parseInt(num[1]), parseInt(num[2])]
+        });
+      }
+    }
+  }
+  if(history.length === 0) { alert('未解析到有效数据，请检查格式'); return; }
+  document.getElementById('dataCount').textContent = history.length + ' 期';
+  predictionCache = null;
+  renderAll();
+}
+
+// ===== 统计函数 =====
+function calcFreq(pos, data) {
+  const arr = data || history;
+  const freq = Array(10).fill(0);
+  for(const h of arr) {
+    if(pos === -1) {
+      freq[h.d[0]]++; freq[h.d[1]]++; freq[h.d[2]]++;
+    } else {
+      freq[h.d[pos]]++;
+    }
+  }
+  return freq;
+}
+
+function calcSumDist() {
+  const dist = Array(28).fill(0);
+  for(const h of history) {
+    const sum = h.d[0] + h.d[1] + h.d[2];
+    dist[sum]++;
+  }
+  return dist;
+}
+
+function calcSpanDist() {
+  const dist = Array(10).fill(0);
+  for(const h of history) {
+    const span = Math.max(...h.d) - Math.min(...h.d);
+    dist[span]++;
+  }
+  return dist;
+}
+
+function calcMiss(data) {
+  const arr = data || history;
+  const miss = Array(10).fill(0);
+  for(let n=0; n<10; n++) {
+    miss[n] = 0;
+    for(let i = arr.length - 1; i >= 0; i--) {
+      if(arr[i].d.includes(n)) { miss[n] = arr.length - 1 - i; break; }
+      if(i === 0) miss[n] = arr.length;
+    }
+  }
+  return miss;
+}
+
+function calcOddEven() {
+  const combo = { '3奇0偶':0, '2奇1偶':0, '1奇2偶':0, '0奇3偶':0 };
+  for(const h of history) {
+    const oddCount = h.d.filter(n => n % 2 === 1).length;
+    const key = oddCount+'奇'+(3-oddCount)+'偶';
+    combo[key]++;
+  }
+  return combo;
+}
+
+function calcBigSmall() {
+  const combo = { '3大0小':0, '2大1小':0, '1大2小':0, '0大3小':0 };
+  for(const h of history) {
+    const bigCount = h.d.filter(n => n >= 5).length;
+    const key = bigCount+'大'+(3-bigCount)+'小';
+    combo[key]++;
+  }
+  return combo;
+}
+
+// ===== 形态分析计算 =====
+function calcForm() {
+  let g6 = 0, g3 = 0, g1 = 0;
+  const recentForms = [];
+  for(const h of history) {
+    const s = new Set(h.d);
+    if(s.size === 3) g6++;
+    else if(s.size === 2) g3++;
+    else g1++;
+    recentForms.push({ period: h.period, d: h.d, type: s.size === 3 ? 'g6' : (s.size === 2 ? 'g3' : 'g1') });
+  }
+  return { g6, g3, g1, total: history.length, recent: recentForms.slice(-10).reverse() };
+}
+
+// ===== 核心预测计算（确定性，基于150期完整数据） =====
+function calculatePredictions() {
+  if(history.length === 0) return null;
+
+  // 使用全部历史数据（最近150期）
+  const freqH = calcFreq(0);
+  const freqT = calcFreq(1);
+  const freqU = calcFreq(2);
+  const totalH = freqH.reduce((a,b)=>a+b, 0) || 1;
+  const totalT = freqT.reduce((a,b)=>a+b, 0) || 1;
+  const totalU = freqU.reduce((a,b)=>a+b, 0) || 1;
+
+  // 计算所有1000种组合的概率（确定性排序）
+  const allCombos = [];
+  for(let h=0; h<10; h++) {
+    for(let t=0; t<10; t++) {
+      for(let u=0; u<10; u++) {
+        const prob = (freqH[h]/totalH) * (freqT[t]/totalT) * (freqU[u]/totalU);
+        allCombos.push({
+          digits: [h, t, u],
+          num: String(h)+String(t)+String(u),
+          prob: prob,
+          sum: h+t+u,
+          span: Math.max(h,t,u) - Math.min(h,t,u)
+        });
+      }
+    }
+  }
+
+  // 按概率从高到低排序（确定性）
+  allCombos.sort((a, b) => b.prob - a.prob || a.num.localeCompare(b.num));
+
+  // 取前520注
+  const top520 = allCombos.slice(0, 520);
+
+  // ===== 最近25期数据 =====
+  const recent25 = history.slice(-25);
+  const freq25 = calcFreq(-1, recent25);
+  const miss25 = calcMiss(recent25);
+  const total25 = freq25.reduce((a,b)=>a+b, 0) || 1;
+
+  // 25期综合评分（频率 + 遗漏回补 + 近期趋势）
+  const scores25 = [];
+  for(let d=0; d<10; d++) {
+    const freqScore = freq25[d] / total25 * 100;
+    const missScore = miss25[d] > 0 ? (1 / (miss25[d] + 1)) * 20 : 0;
+    // 最近10期权重加倍
+    const recent10 = history.slice(-10);
+    let recentFreq = 0;
+    for(const h of recent10) {
+      if(h.d.includes(d)) recentFreq++;
+    }
+    const recentScore = recentFreq * 3;
+    const totalScore = freqScore + missScore + recentScore;
+    scores25.push({
+      digit: d,
+      score: totalScore,
+      freq: freq25[d],
+      pct: (freq25[d]/total25*100).toFixed(1),
+      miss: miss25[d],
+      recent: recentFreq
+    });
+  }
+  scores25.sort((a, b) => b.score - a.score);
+
+  // 3个胆码：金、银、铜
+  const danma3 = scores25.slice(0, 3);
+
+  // ===== 4组双飞胆（基于3个胆码推导） =====
+  // 3个胆码组合出3对：金+银，金+铜，银+铜
+  // 第4对：金胆 + 第4位高频号
+  const dan4 = scores25[3];
+  const shuangfei4 = [
+    { a: danma3[0].digit, b: danma3[1].digit, type: '金+银', rank: 1 },
+    { a: danma3[0].digit, b: danma3[2].digit, type: '金+铜', rank: 2 },
+    { a: danma3[1].digit, b: danma3[2].digit, type: '银+铜', rank: 3 },
+    { a: danma3[0].digit, b: dan4.digit, type: '金+4号', rank: 4 }
+  ];
+  // 计算每对在25期中的共同出现次数
+  for(const p of shuangfei4) {
+    let coCount = 0;
+    for(const h of recent25) {
+      if(h.d.includes(p.a) && h.d.includes(p.b)) coCount++;
+    }
+    p.count = coCount;
+    p.pct = (coCount / 25 * 100).toFixed(1);
+  }
+
+  // ===== 4码/5码/6码复式分析 =====
+  const top4 = scores25.slice(0, 4);
+  const top5 = scores25.slice(0, 5);
+  const top6 = scores25.slice(0, 6);
+
+  function calcCompoundStats(topNums) {
+    const nums = topNums.map(s => s.digit);
+    const combos = [];
+    for(let i=0; i<nums.length; i++) {
+      for(let j=0; j<nums.length; j++) {
+        for(let k=0; k<nums.length; k++) {
+          combos.push(nums[i]*100 + nums[j]*10 + nums[k]);
+        }
+      }
+    }
+    // 计算这些组合在25期中实际命中次数
+    let hits = 0;
+    for(const h of recent25) {
+      const num = h.d[0]*100 + h.d[1]*10 + h.d[2];
+      if(combos.includes(num)) hits++;
+    }
+    return {
+      numbers: nums,
+      totalCombos: Math.pow(nums.length, 3),
+      hitCount: hits,
+      hitRate: (hits / 25 * 100).toFixed(1),
+      avgFreq: (topNums.reduce((a,b)=>a + parseFloat(b.pct), 0) / topNums.length).toFixed(1)
+    };
+  }
+
+  const compound4 = calcCompoundStats(top4);
+  const compound5 = calcCompoundStats(top5);
+  const compound6 = calcCompoundStats(top6);
+
+  return {
+    top520: top520,
+    totalCombos: allCombos.length,
+    danma3: danma3,
+    shuangfei4: shuangfei4,
+    compound4: compound4,
+    compound5: compound5,
+    compound6: compound6,
+    recentPeriod: recent25.length,
+    dataPeriod: history.length
+  };
+}
+
+// ===== 渲染函数 =====
+function renderAll() {
+  renderRecent();
+  renderStats();
+  renderForm();
+  renderTrend();
+  renderPrediction();
+}
+
+// ===== 形态分析渲染 =====
+function renderForm() {
+  const el = document.getElementById('formChart');
+  if(history.length === 0) return;
+
+  const data = calcForm();
+  const t = data.total || 1;
+  const p6 = (data.g6 / t * 100).toFixed(1);
+  const p3 = (data.g3 / t * 100).toFixed(1);
+  const p1 = (data.g1 / t * 100).toFixed(1);
+
+  const lastG6 = data.recent.find(r => r.type === 'g6');
+  const lastG3 = data.recent.find(r => r.type === 'g3');
+  const lastG1 = data.recent.find(r => r.type === 'g1');
+
+  function ballsHTML(item) {
+    if(!item) return '<span style="color:var(--dim);font-size:10px">--</span>';
+    return item.d.map(n => `<div class="form-mini-ball" style="background:linear-gradient(135deg,${digitColors[n]},${digitColors[n]}88)">${n}</div>`).join('');
+  }
+
+  el.innerHTML = `
+    <div class="form-grid">
+      <div class="form-card f6">
+        <div class="form-type" style="color:var(--green)">组六</div>
+        <div class="form-desc">三个数字各不相同（如123）</div>
+        <div class="form-pct" style="color:var(--green)">${p6}%</div>
+        <div class="form-cnt">${data.g6} 次 / ${data.total} 期</div>
+        <div class="form-bar"><div class="form-bar-fill f6" style="width:${p6}%"></div></div>
+        <div class="form-balls">${ballsHTML(lastG6)}</div>
+        <div class="form-recent">最近出现: <b>${lastG6 ? lastG6.period : '无'}</b></div>
+      </div>
+      <div class="form-card f3">
+        <div class="form-type" style="color:var(--orange)">组三</div>
+        <div class="form-desc">两个相同一个不同（如112）</div>
+        <div class="form-pct" style="color:var(--orange)">${p3}%</div>
+        <div class="form-cnt">${data.g3} 次 / ${data.total} 期</div>
+        <div class="form-bar"><div class="form-bar-fill f3" style="width:${p3}%"></div></div>
+        <div class="form-balls">${ballsHTML(lastG3)}</div>
+        <div class="form-recent">最近出现: <b>${lastG3 ? lastG3.period : '无'}</b></div>
+      </div>
+      <div class="form-card f1">
+        <div class="form-type" style="color:var(--red)">豹子</div>
+        <div class="form-desc">三个数字完全相同（如111）</div>
+        <div class="form-pct" style="color:var(--red)">${p1}%</div>
+        <div class="form-cnt">${data.g1} 次 / ${data.total} 期</div>
+        <div class="form-bar"><div class="form-bar-fill f1" style="width:${p1}%"></div></div>
+        <div class="form-balls">${ballsHTML(lastG1)}</div>
+        <div class="form-recent">最近出现: <b>${lastG1 ? lastG1.period : '无'}</b></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;justify-content:center">
+      ${data.recent.slice(0, 10).map(r => {
+        const cls = r.type === 'g6' ? 'var(--green)' : (r.type === 'g3' ? 'var(--orange)' : 'var(--red)');
+        const label = r.type === 'g6' ? '组六' : (r.type === 'g3' ? '组三' : '豹子');
+        return `<div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(0,0,0,0.2);border-radius:4px;border:1px solid ${cls.replace(')',',0.3)').replace('var(','rgba(')}">
+          <span style="font-size:9px;color:var(--dim)">${r.period}</span>
+          <span style="font-size:9px;color:${cls};font-weight:600">${label}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderRecent() {
+  const el = document.getElementById('recentDraw');
+  const recent = history.slice(-3).reverse();
+  if(recent.length === 0) return;
+  el.innerHTML = recent.map((h,idx) => {
+    const colors = ['ball-red','ball-blue','ball-green'];
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:10px;color:var(--dim);width:70px">${h.period}</span>
+        <div class="recent-balls">
+          ${h.d.map((n,i) => `<div class="ball ${colors[i]}">${n}</div>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderStats() {
+  let totalSum = 0, totalSpan = 0, oddCount = 0, bigCount = 0;
+  for(const h of history) {
+    totalSum += h.d[0]+h.d[1]+h.d[2];
+    totalSpan += Math.max(...h.d) - Math.min(...h.d);
+    oddCount += h.d.filter(n=>n%2===1).length;
+    bigCount += h.d.filter(n=>n>=5).length;
+  }
+  const total = history.length * 3;
+  document.getElementById('avgSum').textContent = (totalSum/history.length).toFixed(1);
+  document.getElementById('avgSpan').textContent = (totalSpan/history.length).toFixed(1);
+  document.getElementById('oddRatio').textContent = (oddCount/total*100).toFixed(0)+'%';
+  document.getElementById('bigRatio').textContent = (bigCount/total*100).toFixed(0)+'%';
+}
+
+function renderTrend() {
+  const el = document.getElementById('trendChart');
+  const recent = history.slice(-20).reverse();
+  if(recent.length === 0) return;
+  el.innerHTML = `
+    <table class="trend-table">
+      <thead>
+        <tr>
+          <th>期号</th>
+          <th>百位</th>
+          <th>十位</th>
+          <th>个位</th>
+          <th>和值</th>
+          <th>跨度</th>
+          <th>奇偶</th>
+          <th>大小</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recent.map(h => {
+          const sum = h.d[0]+h.d[1]+h.d[2];
+          const span = Math.max(...h.d)-Math.min(...h.d);
+          const oddCnt = h.d.filter(n=>n%2===1).length;
+          const bigCnt = h.d.filter(n=>n>=5).length;
+          return `
+            <tr>
+              <td>${h.period}</td>
+              ${h.d.map((n,i) => `<td><span class="trend-num" style="background:${digitColors[n]};color:#fff">${n}</span></td>`).join('')}
+              <td style="color:var(--green);font-weight:600">${sum}</td>
+              <td style="color:var(--orange);font-weight:600">${span}</td>
+              <td style="color:var(--purple);font-size:10px">${oddCnt}奇${3-oddCnt}偶</td>
+              <td style="color:var(--cyan);font-size:10px">${bigCnt}大${3-bigCnt}小</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ===== 预测结果渲染 =====
+let numGridPage = 1;
+const pageSize = 100;
+
+function renderPrediction() {
+  if(history.length === 0) return;
+
+  // 使用缓存（数据不变则结果不变）
+  if(!predictionCache) {
+    predictionCache = calculatePredictions();
+  }
+  const p = predictionCache;
+  const el = document.getElementById('predictionResult');
+
+  // 520组号码分页
+  const totalPages = Math.ceil(p.top520.length / pageSize);
+  if(numGridPage > totalPages) numGridPage = totalPages;
+  const startIdx = (numGridPage - 1) * pageSize;
+  const pageData = p.top520.slice(startIdx, startIdx + pageSize);
+
+  // 全部号码字符串（用于复制）
+  const all520nums = p.top520.map(c => c.num).join(', ');
+  const allDanma = p.danma3.map(d => d.digit).join(', ');
+  const allSF = p.shuangfei4.map(s => s.a + '' + s.b).join(', ');
+
+  el.innerHTML = `
+    <!-- 520组预测号码 -->
+    <div class="section-divider"><span>520组概率排序号码（基于最近${p.dataPeriod}期）</span></div>
+    <div class="copy-btn-row">
+      <button class="copy-btn" data-label="复制全部520组" onclick="copyToClipboard('${all520nums}', this)">复制全部520组</button>
+    </div>
+    <div class="num-grid" id="numGrid">
+      ${pageData.map((item, idx) => {
+        const rank = startIdx + idx + 1;
+        const probPct = (item.prob * 1000).toFixed(3);
+        const topClass = rank <= 10 ? ' top10' : '';
+        return `
+          <div class="num-item${topClass}" onclick="copyToClipboard('${item.num}', this)" data-label="复制">
+            <span class="num-rank">#${rank}</span>
+            ${item.num}
+            <span class="num-prob">${probPct}‰</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="grid-pagination">
+      <button onclick="changePage(-1)" ${numGridPage<=1?'disabled':''}>上一页</button>
+      <span>第 ${numGridPage} / ${totalPages} 页（共 ${p.top520.length} 注）</span>
+      <button onclick="changePage(1)" ${numGridPage>=totalPages?'disabled':''}>下一页</button>
+    </div>
+
+    <!-- 金银铜三胆 -->
+    <div class="danma-section">
+      <div class="danma-title">金/银/铜 三胆（基于最近${p.recentPeriod}期）</div>
+      <div class="danma-balls">
+        ${p.danma3.map((item, idx) => {
+          const cls = ['gold', 'silver', 'bronze'][idx];
+          const label = ['金胆', '银胆', '铜胆'][idx];
+          return `
+            <div class="danma-ball ${cls}">
+              ${item.digit}
+              <div class="danma-pct">${item.pct}%</div>
+              <span class="danma-rank">${label} · 遗漏${item.miss}期</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="copy-btn-group">
+        <button class="copy-btn" data-label="复制三胆" onclick="copyToClipboard('${allDanma}', this)">复制三胆</button>
+      </div>
+      <div class="danma-note">
+        综合评分 = 25期频率 + 遗漏回补 + 近10期热度加权
+      </div>
+    </div>
+
+    <!-- 4组双飞胆 -->
+    <div class="shuangfei-section">
+      <div class="shuangfei-title">4组双飞胆（基于三胆推导 · 最近${p.recentPeriod}期）</div>
+      <div class="shuangfei-list">
+        ${p.shuangfei4.map((pair, idx) => `
+          <div class="shuangfei-card">
+            <div class="shuangfei-balls">
+              <div class="shuangfei-ball" style="background:linear-gradient(135deg,${digitColors[pair.a]},${digitColors[pair.a]}88)">${pair.a}</div>
+              <span class="shuangfei-plus">+</span>
+              <div class="shuangfei-ball" style="background:linear-gradient(135deg,${digitColors[pair.b]},${digitColors[pair.b]}88)">${pair.b}</div>
+            </div>
+            <div class="shuangfei-info">
+              <span class="shuangfei-rank">第${idx+1}组</span>
+              <span class="shuangfei-type">${pair.type}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="copy-btn-group">
+        <button class="copy-btn" data-label="复制双飞胆" onclick="copyToClipboard('${allSF}', this)">复制双飞胆</button>
+        <button class="copy-btn" data-label="一键复制全部" onclick="copyAllPredictions(event)">一键复制全部</button>
+      </div>
+      <div style="text-align:center;font-size:10px;color:var(--dim);margin-top:8px">
+        以三胆为核心推导：金+银、金+铜、银+铜、金+4号
+      </div>
+    </div>
+
+    <!-- 4码/5码/6码复式 -->
+    <div class="compound-section">
+      <div class="compound-title">4码 / 5码 / 6码 复式选号（基于最近${p.recentPeriod}期）</div>
+      <div class="compound-grid">
+        ${renderCompoundCard(p.compound4, 'c4', '4码复式')}
+        ${renderCompoundCard(p.compound5, 'c5', '5码复式')}
+        ${renderCompoundCard(p.compound6, 'c6', '6码复式')}
+      </div>
+      <div style="text-align:center;font-size:10px;color:var(--dim);margin-top:10px">
+        按近25期综合评分从高到低选取 · 含组选+直选所有组合
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:8px 16px;background:rgba(255,82,82,0.06);border-radius:6px;font-size:10px;color:var(--red);text-align:center">
+      以上号码基于历史统计模型生成，排列3为纯随机开奖，分析结果仅供娱乐参考，请理性购彩。
+    </div>
+  `;
+}
+
+function renderCompoundCard(data, cls, label) {
+  const numsStr = data.numbers.join('、');
+  return `
+    <div class="compound-card ${cls}">
+      <div class="compound-label">${label}</div>
+      <div class="compound-balls">
+        ${data.numbers.map(n => `
+          <div class="compound-ball" style="background:linear-gradient(135deg,${digitColors[n]},${digitColors[n]}88)">${n}</div>
+        `).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:6px">${numsStr}</div>
+      <div class="compound-stats">
+        <div>组合数<br><b>${data.totalCombos}</b></div>
+        <div>25期命中<br><b>${data.hitCount}次</b></div>
+        <div>命中率<br><b>${data.hitRate}%</b></div>
+      </div>
+    </div>
+  `;
+}
+
+function changePage(delta) {
+  numGridPage += delta;
+  if(numGridPage < 1) numGridPage = 1;
+  renderPrediction();
+}
+
+// ===== 复制功能 =====
+var latestPredictions = null;
+
+function copyToClipboard(text, btnEl) {
+  const textStr = String(text);
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(textStr).then(function() {
+      if(btnEl) {
+        const origLabel = btnEl.dataset.label || btnEl.innerText;
+        btnEl.classList.add('copied');
+        btnEl.innerText = '已复制';
+        setTimeout(function(){
+          btnEl.classList.remove('copied');
+          btnEl.innerText = origLabel;
+        }, 1500);
+      }
+    }).catch(function() { fallbackCopy(textStr, btnEl); });
+  } else { fallbackCopy(textStr, btnEl); }
+}
+
+function fallbackCopy(text, btnEl) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.top='-9999px';
+  document.body.appendChild(ta); ta.select();
+  try {
+    document.execCommand('copy');
+    if(btnEl) {
+      const origLabel = btnEl.dataset.label || btnEl.innerText;
+      btnEl.classList.add('copied');
+      btnEl.innerText = '已复制';
+      setTimeout(function(){
+        btnEl.classList.remove('copied');
+        btnEl.innerText = origLabel;
+      }, 1500);
+    }
+  } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+function copyAllPredictions(evt) {
+  if(!predictionCache) return;
+  var btn = evt && evt.currentTarget ? evt.currentTarget : (window.event && window.event.currentTarget ? window.event.currentTarget : null);
+  var p = predictionCache;
+  var top10 = p.top520.slice(0, 10).map(c => c.num).join(', ');
+  var dm = p.danma3.map(d => d.digit).join(', ');
+  var sf = p.shuangfei4.map(s => s.a + '' + s.b).join(', ');
+  var c4 = p.compound4.numbers.join(', ');
+  var c5 = p.compound5.numbers.join(', ');
+  var c6 = p.compound6.numbers.join(', ');
+  var text = '【排列3预测分析】\n' +
+    '数据范围: 最近' + p.dataPeriod + '期\n' +
+    '前10注号码: ' + top10 + '\n' +
+    '金银铜三胆: ' + dm + '（基于25期）\n' +
+    '4组双飞胆: ' + sf + '\n' +
+    '4码复式: ' + c4 + '\n' +
+    '5码复式: ' + c5 + '\n' +
+    '6码复式: ' + c6;
+  copyToClipboard(text, btn);
+}
+
+// 初始化提示
+window.addEventListener('load', function() {
+  console.log('排列3分析系统已加载');
+});
+
+// ===== PWA Service Worker 注册 =====
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js').then(function(reg) {
+      console.log('PWA Service Worker 已注册');
+    }).catch(function(err) {
+      console.log('Service Worker 注册失败:', err);
+    });
+  });
+}
+
+// ===== PWA 安装提示 =====
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  var btn = document.createElement('div');
+  btn.innerHTML = '📥 安装到手机主屏幕';
+  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#00b4ff,#00e676);color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(0,180,255,0.4)';
+  btn.onclick = function() {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function() {
+      btn.remove();
+      deferredPrompt = null;
+    });
+  };
+  document.body.appendChild(btn);
+  setTimeout(function() { if(btn.parentNode) btn.remove(); }, 15000);
+});
+</script>
+
+</body>
+</html>
