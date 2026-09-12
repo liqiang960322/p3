@@ -423,6 +423,67 @@ textarea.data-input:focus { border-color: var(--cyan); }
   font-size: 11px; font-weight: 700; font-family: monospace;
 }
 
+/* ===== 专家预测数据面板 ===== */
+.expert-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.expert-tab {
+  padding: 8px 16px; background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--dim); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  font-family: inherit;
+}
+.expert-tab:hover { color: var(--text); }
+.expert-tab.active { color: var(--text); border-bottom-color: #000000; }
+.expert-content { display: none; }
+.expert-content.active { display: block; }
+.expert-list { display: flex; flex-direction: column; gap: 12px; }
+.expert-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  transition: all 0.2s;
+}
+.expert-card:hover { border-color: #000000; transform: translateY(-1px); }
+.expert-avatar {
+  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--border);
+}
+.expert-info { flex: 1; }
+.expert-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.expert-grade { font-size: 11px; color: var(--dim); margin-bottom: 6px; }
+.expert-stats { display: flex; gap: 16px; font-size: 11px; }
+.expert-stat { color: var(--dim); }
+.expert-stat b { color: var(--text); font-weight: 700; }
+.expert-rank {
+  font-size: 20px; font-weight: 700; color: var(--dim); min-width: 40px; text-align: center;
+}
+.expert-rank.top3 { color: #000000; }
+.scheme-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.scheme-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.scheme-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.scheme-time { font-size: 11px; color: var(--dim); }
+.scheme-meta { display: flex; gap: 12px; font-size: 11px; color: var(--dim); margin-bottom: 8px; }
+.scheme-meta b { color: var(--text); }
+.scheme-record { font-size: 11px; color: var(--dim); line-height: 1.6; }
+.scheme-record b { color: var(--text); }
+.issue-info {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; margin-bottom: 16px; text-align: center;
+}
+.issue-number { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.issue-time { font-size: 12px; color: var(--dim); }
+.loading-spinner {
+  text-align: center; padding: 40px 20px; color: var(--dim); font-size: 13px;
+}
+.refresh-btn {
+  background: #000000; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.refresh-btn:hover { opacity: 0.8; }
+
 /* ===== 移动端适配 ===== */
 @media screen and (max-width: 768px) {
   body { padding: 8px; }
@@ -1117,6 +1178,28 @@ textarea.data-input:focus { border-color: var(--cyan); }
       <div class="panel-title">近期开奖走势</div>
       <div class="trend-chart" id="trendChart">
         <div style="color:var(--dim);font-size:12px;text-align:center;padding:20px 0">暂无数据</div>
+      </div>
+    </div>
+
+    <!-- 专家预测数据 -->
+    <div class="panel">
+      <div class="panel-title" style="justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:6px;">专家预测数据（彩民之家）</span>
+        <button class="refresh-btn" onclick="ExpertData.refresh(this)">刷新数据</button>
+      </div>
+      <div class="expert-tabs">
+        <button class="expert-tab active" onclick="ExpertData.switchTab('schemes')">本期方案</button>
+        <button class="expert-tab" onclick="ExpertData.switchTab('ranking')">免费排行</button>
+        <button class="expert-tab" onclick="ExpertData.switchTab('hot')">热门专家</button>
+      </div>
+      <div id="expertSchemes" class="expert-content active">
+        <div class="loading-spinner">点击"刷新数据"加载专家方案</div>
+      </div>
+      <div id="expertRanking" class="expert-content">
+        <div class="loading-spinner">点击"刷新数据"加载排行榜</div>
+      </div>
+      <div id="expertHot" class="expert-content">
+        <div class="loading-spinner">点击"刷新数据"加载热门专家</div>
       </div>
     </div>
 
@@ -2261,6 +2344,187 @@ function copyAllPredictions(evt) {
 window.addEventListener('load', function() {
   console.log('排列3分析系统已加载');
 });
+
+// ===== 专家预测数据系统 =====
+const ExpertData = {
+  API_BASE: 'https://i.cmzj.net',
+
+  switchTab(tabName) {
+    document.querySelectorAll('.expert-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.expert-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('expert' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+  },
+
+  async refresh(btn) {
+    if (!btn) btn = document.querySelector('.refresh-btn');
+    const originalText = btn.textContent;
+    btn.textContent = '加载中...';
+    btn.disabled = true;
+
+    try {
+      await Promise.all([
+        this.loadSchemes(),
+        this.loadRanking(),
+        this.loadHotExperts()
+      ]);
+    } catch (err) {
+      console.error('刷新专家数据失败:', err);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  },
+
+  async loadSchemes() {
+    const container = document.getElementById('expertSchemes');
+    container.innerHTML = '<div class="loading-spinner">加载中...</div>';
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append('lottery', '3');
+      formData.append('page', '1');
+      formData.append('limit', '10');
+
+      const res = await fetch(this.API_BASE + '/bbx/getBbxSchemeListByPC', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+      const json = await res.json();
+
+      if (json.code !== 0 || !json.data) {
+        container.innerHTML = '<div class="loading-spinner">暂无数据</div>';
+        return;
+      }
+
+      let html = '';
+      json.data.forEach(issueGroup => {
+        const issue = issueGroup.issueData;
+        html += '<div class="issue-info">';
+        html += '<div class="issue-number">第 ' + issue.issue + ' 期</div>';
+        html += '<div class="issue-time">截止时间: ' + issue.endTime + '</div>';
+        html += '</div>';
+
+        html += '<div class="expert-list">';
+        issueGroup.pageData.forEach(scheme => {
+          html += '<div class="scheme-card">';
+          html += '<div class="scheme-header">';
+          html += '<div class="scheme-title">' + scheme.name + ' (' + scheme.gradeName + ')</div>';
+          html += '<div class="scheme-time">' + scheme.releaseTime + '</div>';
+          html += '</div>';
+          html += '<div class="scheme-meta">';
+          html += '<span>战绩: <b>' + (scheme.militaryExploits || '暂无') + '</b></span>';
+          html += '<span>浏览: <b>' + scheme.hits + '</b></span>';
+          html += '</div>';
+          if (scheme.goodRecord) {
+            html += '<div class="scheme-record"><b>详细战绩:</b> ' + scheme.goodRecord.replace(/_/g, ' · ') + '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+
+      container.innerHTML = html || '<div class="loading-spinner">暂无方案</div>';
+    } catch (err) {
+      console.error('加载方案失败:', err);
+      container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
+    }
+  },
+
+  async loadRanking() {
+    const container = document.getElementById('expertRanking');
+    container.innerHTML = '<div class="loading-spinner">加载中...</div>';
+
+    try {
+      const params = new URLSearchParams({
+        limit: '20',
+        page: '1',
+        lottery: '23',
+        quota: '1',
+        type: '3',
+        target: '总分',
+        classPay: '1',
+        issueNum: '7'
+      });
+
+      const res = await fetch(this.API_BASE + '/expert/rankingList?' + params.toString());
+      const json = await res.json();
+
+      if (json.code !== 0 || !json.data) {
+        container.innerHTML = '<div class="loading-spinner">暂无数据</div>';
+        return;
+      }
+
+      let html = '<div class="expert-list">';
+      json.data.forEach((expert, idx) => {
+        const rankClass = idx < 3 ? 'expert-rank top3' : 'expert-rank';
+        html += '<div class="expert-card">';
+        html += '<div class="' + rankClass + '">' + (idx + 1) + '</div>';
+        html += '<img class="expert-avatar" src="' + expert.image + '" alt="' + expert.name + '" onerror="this.style.display=\'none\'">';
+        html += '<div class="expert-info">';
+        html += '<div class="expert-name">' + expert.name + '</div>';
+        html += '<div class="expert-grade">' + expert.gradeName + '</div>';
+        html += '<div class="expert-stats">';
+        html += '<span class="expert-stat">评分: <b>' + expert.norm.toFixed(1) + '</b></span>';
+        html += '<span class="expert-stat">方案数: <b>' + expert.number + '</b></span>';
+        if (expert.bestRecord) {
+          html += '<span class="expert-stat">最佳: <b>' + expert.bestRecord + '</b></span>';
+        }
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      container.innerHTML = html;
+    } catch (err) {
+      console.error('加载排行榜失败:', err);
+      container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
+    }
+  },
+
+  async loadHotExperts() {
+    const container = document.getElementById('expertHot');
+    container.innerHTML = '<div class="loading-spinner">加载中...</div>';
+
+    try {
+      const params = new URLSearchParams({ lottery: '3' });
+      const res = await fetch(this.API_BASE + '/expert/hotExpertList?' + params.toString());
+      const json = await res.json();
+
+      if (json.code !== 0 || !json.data) {
+        container.innerHTML = '<div class="loading-spinner">暂无数据</div>';
+        return;
+      }
+
+      let html = '<div class="expert-list">';
+      json.data.forEach((expert, idx) => {
+        const rankClass = idx < 3 ? 'expert-rank top3' : 'expert-rank';
+        html += '<div class="expert-card">';
+        html += '<div class="' + rankClass + '">' + (idx + 1) + '</div>';
+        html += '<img class="expert-avatar" src="' + expert.image + '" alt="' + expert.name + '" onerror="this.style.display=\'none\'">';
+        html += '<div class="expert-info">';
+        html += '<div class="expert-name">' + expert.name + '</div>';
+        html += '<div class="expert-grade">' + expert.gradeName + ' · ' + expert.lotteryName + '</div>';
+        html += '<div class="expert-stats">';
+        html += '<span class="expert-stat">方案数: <b>' + expert.number + '</b></span>';
+        if (expert.bestRecord) {
+          html += '<span class="expert-stat">最佳: <b>' + expert.bestRecord + '</b></span>';
+        }
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      container.innerHTML = html;
+    } catch (err) {
+      console.error('加载热门专家失败:', err);
+      container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
+    }
+  }
+};
 
 // ===== PWA Service Worker 注册 =====
 if('serviceWorker' in navigator) {
