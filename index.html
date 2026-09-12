@@ -1291,7 +1291,12 @@ const AuthSystem = {
   
   logout() {
     this.clearSession();
-    location.reload();
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('userInfoBar').style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').classList.remove('show');
   },
   
   addUser(username, password) {
