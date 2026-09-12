@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="P3预测">
 <meta name="mobile-web-app-capable" content="yes">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -886,6 +889,14 @@ textarea.data-input:focus { border-color: var(--cyan); }
 </style>
 </head>
 <body>
+<script>
+(function(){
+  var mainApp = document.getElementById('mainApp');
+  var loginOverlay = document.getElementById('loginOverlay');
+  if (mainApp) mainApp.style.display = 'none';
+  if (loginOverlay) loginOverlay.style.display = 'flex';
+})();
+</script>
 
 <!-- 登录页面 -->
 <div class="login-overlay" id="loginOverlay">
