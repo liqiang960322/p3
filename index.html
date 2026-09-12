@@ -514,6 +514,111 @@ textarea.data-input:focus { border-color: var(--cyan); }
   .danma-ball { width: 46px; height: 46px; font-size: 18px; }
 }
 
+
+/* ===== 专家详情模态框 ===== */
+.expert-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.detail-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 48px rgba(0, 180, 255, 0.3);
+}
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.detail-close {
+  background: #000000;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.detail-close:hover { opacity: 0.8; }
+.detail-body { padding: 24px; }
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.detail-stat-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.detail-stat-label {
+  font-size: 11px;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+.detail-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.detail-history {
+  margin-top: 24px;
+}
+.detail-history-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.detail-history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.history-issue {
+  font-size: 12px;
+  color: var(--dim);
+}
+.history-result {
+  font-size: 13px;
+  font-weight: 700;
+}
+.history-win { color: #00e676; }
+.history-loss { color: #ff4757; }
 /* ===== 登录页面 ===== */
 .login-overlay {
   position: fixed;
@@ -2526,7 +2631,7 @@ const ExpertData = {
 
         html += '<div class="expert-list">';
         issueGroup.pageData.forEach(scheme => {
-          html += '<div class="scheme-card">';
+          html += '<div class="scheme-card" onclick="ExpertData.showDetail(' + scheme.expertId + ', \'' + scheme.name.replace(/'/g, "\'") + \'')" style="cursor:pointer;">';
           html += '<div class="scheme-header">';
           html += '<div class="scheme-title">' + scheme.name + ' (' + scheme.gradeName + ')</div>';
           html += '<div class="scheme-time">' + scheme.releaseTime + '</div>';
@@ -2588,6 +2693,97 @@ const ExpertData = {
     } catch (err) {
       console.error('加载热门专家失败:', err);
       container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
+    }
+  }
+
+  async showDetail(expertId, expertName) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'expert-detail-modal';
+    modal.id = 'expertDetailModal';
+    
+    modal.innerHTML = `
+      <div class="detail-content">
+        <div class="detail-header">
+          <div class="detail-title">${expertName} - 详细数据</div>
+          <button class="detail-close" onclick="ExpertData.closeDetail()">关闭</button>
+        </div>
+        <div class="detail-body">
+          <div class="loading-spinner">加载中...</div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Fetch detailed data
+    try {
+      const params = new URLSearchParams({ expertId: expertId });
+      const res = await this.fetchWithProxy(this.API_BASE + '/expert/detail?' + params.toString());
+      const json = await res.json();
+      
+      if (json.code === 0 && json.data) {
+        const data = json.data;
+        let html = '';
+        
+        // Statistics section
+        html += '<div class="detail-stats">';
+        html += '<div class="detail-stat-box">';
+        html += '<div class="detail-stat-label">总方案数</div>';
+        html += '<div class="detail-stat-value">' + (data.totalSchemes || 0) + '</div>';
+        html += '</div>';
+        
+        html += '<div class="detail-stat-box">';
+        html += '<div class="detail-stat-label">胜率</div>';
+        html += '<div class="detail-stat-value">' + (data.winRate || '0%') + '</div>';
+        html += '</div>';
+        
+        html += '<div class="detail-stat-box">';
+        html += '<div class="detail-stat-label">连红期数</div>';
+        html += '<div class="detail-stat-value" style="color: #00e676;">' + (data.consecutiveWins || 0) + '</div>';
+        html += '</div>';
+        
+        html += '<div class="detail-stat-box">';
+        html += '<div class="detail-stat-label">最大连红</div>';
+        html += '<div class="detail-stat-value" style="color: #00e676;">' + (data.maxConsecutiveWins || 0) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Historical predictions
+        html += '<div class="detail-history">';
+        html += '<div class="detail-history-title">历史预测记录</div>';
+        html += '<div class="detail-history-list">';
+        
+        if (data.history && data.history.length > 0) {
+          data.history.forEach(item => {
+            const isWin = item.result === 'win';
+            html += '<div class="history-item">';
+            html += '<div class="history-issue">第 ' + item.issue + ' 期</div>';
+            html += '<div class="history-result ' + (isWin ? 'history-win' : 'history-loss') + '">';
+            html += isWin ? '✓ 命中' : '✗ 未中';
+            html += '</div>';
+            html += '</div>';
+          });
+        } else {
+          html += '<div style="text-align:center;color:var(--dim);padding:20px 0">暂无历史记录</div>';
+        }
+        
+        html += '</div></div>';
+        
+        modal.querySelector('.detail-body').innerHTML = html;
+      } else {
+        modal.querySelector('.detail-body').innerHTML = '<div class="loading-spinner">暂无详细数据</div>';
+      }
+    } catch (err) {
+      console.error('加载详情失败:', err);
+      modal.querySelector('.detail-body').innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
+    }
+  },
+  
+  closeDetail() {
+    const modal = document.getElementById('expertDetailModal');
+    if (modal) {
+      modal.remove();
     }
   }
 };
