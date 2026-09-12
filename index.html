@@ -1052,14 +1052,6 @@ textarea.data-input:focus { border-color: var(--cyan); }
 </style>
 </head>
 <body>
-<script>
-(function(){
-  var mainApp = document.getElementById('mainApp');
-  var loginOverlay = document.getElementById('loginOverlay');
-  if (mainApp) mainApp.style.display = 'none';
-  if (loginOverlay) loginOverlay.style.display = 'flex';
-})();
-</script>
 
 <!-- 登录页面 -->
 <div class="login-overlay" id="loginOverlay">
@@ -1731,6 +1723,14 @@ const AuthSystem = {
 };
 
 AuthSystem.init();
+
+// Hide main app and show login overlay initially
+(function(){
+  var mainApp = document.getElementById('mainApp');
+  var loginOverlay = document.getElementById('loginOverlay');
+  if (mainApp) mainApp.style.display = 'none';
+  if (loginOverlay) loginOverlay.style.display = 'flex';
+})();
 
 // ===== 全局数据 =====
 let history = []; // [{period:'2024232', num:'387', d:[3,8,7]}, ...]
