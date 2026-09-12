@@ -1221,15 +1221,20 @@ const AuthSystem = {
   _suppressAuthListener: false,
   
   async init() {
+    console.log('AuthSystem.init() called');
     this.showLogin();
     this.bindEvents();
+    console.log('bindEvents() completed');
     // 检查是否已有登录会话
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
+      console.log('Existing session found');
       await this.loadUserProfile(session.user.id);
       if (this.currentProfile) {
         this.showApp(this.currentProfile);
       }
+    } else {
+      console.log('No existing session');
     }
     // 监听认证状态变化
     supabase.auth.onAuthStateChange((event, session) => {
@@ -1279,19 +1284,23 @@ const AuthSystem = {
   },
   
   async login(username, password) {
+    console.log('login() called with username:', username);
     try {
       // 使用邮箱登录（用户名作为邮箱前缀）
       const email = username + '@p3app.com';
+      console.log('Email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       if (error) {
+        console.error('Login error:', error);
         if (error.message.includes('Invalid login credentials')) {
           return { success: false, message: '用户名或密码错误' };
         }
         return { success: false, message: error.message };
       }
+      console.log('Login successful, user ID:', data.user.id);
       // 加载用户信息
       await this.loadUserProfile(data.user.id);
       if (!this.currentProfile) {
@@ -1304,8 +1313,10 @@ const AuthSystem = {
         await supabase.auth.signOut();
         return { success: false, message: '授权已过期，请联系管理员续期' };
       }
+      console.log('Login complete, profile:', this.currentProfile);
       return { success: true, profile: this.currentProfile };
     } catch (err) {
+      console.error('Login exception:', err);
       return { success: false, message: '登录失败：' + err.message };
     }
   },
@@ -1559,14 +1570,18 @@ const AuthSystem = {
   bindEvents() {
     const self = this;
     
+    console.log('bindEvents() called');
     document.getElementById('loginBtn').onclick = async function() {
+      console.log('Login button clicked');
       const username = document.getElementById('loginUsername').value.trim();
       const password = document.getElementById('loginPassword').value;
+      console.log('Username:', username, 'Password length:', password.length);
       const btn = this;
       btn.disabled = true;
       btn.textContent = '登录中...';
       
       const result = await self.login(username, password);
+      console.log('Login result:', result);
       if (result.success) {
         self.showApp(result.profile);
       } else {
