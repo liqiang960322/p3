@@ -1158,19 +1158,15 @@ textarea.data-input:focus { border-color: var(--cyan); }
     <!-- 专家预测数据 -->
     <div class="panel">
       <div class="panel-title" style="justify-content:space-between;">
-        <span style="display:flex;align-items:center;gap:6px;">专家预测数据（彩民之家）</span>
+        <span style="display:flex;align-items:center;gap:6px;">专家预测数据</span>
         <button class="refresh-btn" onclick="ExpertData.refresh(this)">刷新数据</button>
       </div>
       <div class="expert-tabs">
         <button class="expert-tab active" onclick="ExpertData.switchTab('schemes')">本期方案</button>
-        <button class="expert-tab" onclick="ExpertData.switchTab('ranking')">免费排行</button>
         <button class="expert-tab" onclick="ExpertData.switchTab('hot')">热门专家</button>
       </div>
       <div id="expertSchemes" class="expert-content active">
         <div class="loading-spinner">点击"刷新数据"加载专家方案</div>
-      </div>
-      <div id="expertRanking" class="expert-content">
-        <div class="loading-spinner">点击"刷新数据"加载排行榜</div>
       </div>
       <div id="expertHot" class="expert-content">
         <div class="loading-spinner">点击"刷新数据"加载热门专家</div>
@@ -2488,7 +2484,6 @@ const ExpertData = {
     try {
       await Promise.all([
         this.loadSchemes(),
-        this.loadRanking(),
         this.loadHotExperts()
       ]);
     } catch (err) {
@@ -2551,58 +2546,6 @@ const ExpertData = {
       container.innerHTML = html || '<div class="loading-spinner">暂无方案</div>';
     } catch (err) {
       console.error('加载方案失败:', err);
-      container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
-    }
-  },
-
-  async loadRanking() {
-    const container = document.getElementById('expertRanking');
-    container.innerHTML = '<div class="loading-spinner">加载中...</div>';
-
-    try {
-      const params = new URLSearchParams({
-        limit: '20',
-        page: '1',
-        lottery: '23',
-        quota: '1',
-        type: '3',
-        target: '总分',
-        classPay: '1',
-        issueNum: '7'
-      });
-
-      const res = await this.fetchWithProxy(this.API_BASE + '/expert/rankingList?' + params.toString());
-      const json = await res.json();
-
-      if (json.code !== 0 || !json.data) {
-        container.innerHTML = '<div class="loading-spinner">暂无数据</div>';
-        return;
-      }
-
-      let html = '<div class="expert-list">';
-      json.data.forEach((expert, idx) => {
-        const rankClass = idx < 3 ? 'expert-rank top3' : 'expert-rank';
-        html += '<div class="expert-card">';
-        html += '<div class="' + rankClass + '">' + (idx + 1) + '</div>';
-        html += '<img class="expert-avatar" src="' + expert.image + '" alt="' + expert.name + '" onerror="this.style.display=\'none\'">';
-        html += '<div class="expert-info">';
-        html += '<div class="expert-name">' + expert.name + '</div>';
-        html += '<div class="expert-grade">' + expert.gradeName + '</div>';
-        html += '<div class="expert-stats">';
-        html += '<span class="expert-stat">评分: <b>' + expert.norm.toFixed(1) + '</b></span>';
-        html += '<span class="expert-stat">方案数: <b>' + expert.number + '</b></span>';
-        if (expert.bestRecord) {
-          html += '<span class="expert-stat">最佳: <b>' + expert.bestRecord + '</b></span>';
-        }
-        html += '</div>';
-        html += '</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-
-      container.innerHTML = html;
-    } catch (err) {
-      console.error('加载排行榜失败:', err);
       container.innerHTML = '<div class="loading-spinner">加载失败，请稍后重试</div>';
     }
   },
