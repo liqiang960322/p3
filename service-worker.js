@@ -1,4 +1,4 @@
-const CACHE_NAME = 'p3-app-v1';
+const CACHE_NAME = 'p3-app-v2';
 const ASSETS = [
   '/排列3预测分析系统.html',
   '/manifest.json',
