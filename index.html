@@ -874,13 +874,22 @@ textarea.data-input:focus { border-color: var(--cyan); }
 .user-info-btn:hover {
   background: rgba(255, 82, 82, 0.2);
 }
+.login-footer span {
+  color: var(--cyan);
+  cursor: pointer;
+  font-size: 12px;
+  transition: opacity 0.2s;
+}
+.login-footer span:hover {
+  opacity: 0.7;
+}
 </style>
 </head>
 <body>
 
 <!-- 登录页面 -->
 <div class="login-overlay" id="loginOverlay">
-  <div class="login-box">
+  <div class="login-box" id="loginBox">
     <div class="login-title">排列3 预测分析系统</div>
     <div class="login-subtitle">请登录以继续使用</div>
     <div class="login-error" id="loginError"></div>
@@ -894,7 +903,30 @@ textarea.data-input:focus { border-color: var(--cyan); }
     </div>
     <button class="login-btn" id="loginBtn">登 录</button>
     <div class="login-footer">
-      默认管理员账号: admin / admin123
+      <span id="showRegisterBtn">没有账号？点击注册</span>
+    </div>
+  </div>
+
+  <!-- 注册表单 -->
+  <div class="login-box" id="registerBox" style="display:none;">
+    <div class="login-title">排列3 预测分析系统</div>
+    <div class="login-subtitle">注册新账号</div>
+    <div class="login-error" id="registerError"></div>
+    <div class="form-group">
+      <label class="form-label">用户名</label>
+      <input type="text" class="form-input" id="registerUsername" placeholder="请输入用户名" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">密码</label>
+      <input type="password" class="form-input" id="registerPassword" placeholder="请输入密码" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label class="form-label">确认密码</label>
+      <input type="password" class="form-input" id="registerConfirmPassword" placeholder="请再次输入密码" autocomplete="new-password">
+    </div>
+    <button class="login-btn" id="registerBtn">注 册</button>
+    <div class="login-footer">
+      <span id="showLoginBtn">已有账号？点击登录</span>
     </div>
   </div>
 </div>
@@ -1202,6 +1234,26 @@ const AuthSystem = {
     return { success: true, user };
   },
   
+  register(username, password) {
+    if (!username || !password) return { success: false, message: '用户名和密码不能为空' };
+    if (username.length < 2) return { success: false, message: '用户名至少需要2个字符' };
+    if (password.length < 4) return { success: false, message: '密码至少需要4个字符' };
+    const users = this.getUsers();
+    if (users.find(u => u.username === username)) {
+      return { success: false, message: '用户名已存在' };
+    }
+    users.push({
+      username,
+      password,
+      role: 'user',
+      licenseType: 'none',
+      licenseExpiry: null,
+      createdAt: Date.now()
+    });
+    this.saveUsers(users);
+    return { success: true, message: '注册成功，请登录' };
+  },
+  
   logout() {
     this.clearSession();
     location.reload();
@@ -1290,6 +1342,51 @@ const AuthSystem = {
     
     document.getElementById('loginPassword').onkeydown = function(e) {
       if (e.key === 'Enter') document.getElementById('loginBtn').click();
+    };
+    
+    document.getElementById('showRegisterBtn').onclick = function() {
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('registerBox').style.display = 'block';
+      document.getElementById('registerError').classList.remove('show');
+    };
+    
+    document.getElementById('showLoginBtn').onclick = function() {
+      document.getElementById('registerBox').style.display = 'none';
+      document.getElementById('loginBox').style.display = 'block';
+      document.getElementById('loginError').classList.remove('show');
+    };
+    
+    document.getElementById('registerBtn').onclick = function() {
+      const username = document.getElementById('registerUsername').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const confirmPassword = document.getElementById('registerConfirmPassword').value;
+      
+      if (password !== confirmPassword) {
+        const errEl = document.getElementById('registerError');
+        errEl.textContent = '两次输入的密码不一致';
+        errEl.classList.add('show');
+        return;
+      }
+      
+      const result = self.register(username, password);
+      if (result.success) {
+        document.getElementById('registerUsername').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerConfirmPassword').value = '';
+        document.getElementById('registerBox').style.display = 'none';
+        document.getElementById('loginBox').style.display = 'block';
+        const errEl = document.getElementById('loginError');
+        errEl.textContent = result.message;
+        errEl.classList.add('show');
+      } else {
+        const errEl = document.getElementById('registerError');
+        errEl.textContent = result.message;
+        errEl.classList.add('show');
+      }
+    };
+    
+    document.getElementById('registerConfirmPassword').onkeydown = function(e) {
+      if (e.key === 'Enter') document.getElementById('registerBtn').click();
     };
     
     document.getElementById('logoutBtn').onclick = function() {
