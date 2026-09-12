@@ -1136,11 +1136,13 @@ textarea.data-input:focus { border-color: var(--cyan); }
 const AuthSystem = {
   STORAGE_KEY: 'p3_users',
   SESSION_KEY: 'p3_session',
+  ACTIVE_SESSION_KEY: 'p3_active_session',
   
   init() {
     this.ensureAdminExists();
-    this.checkSession();
+    this.showLogin();
     this.bindEvents();
+    this.startSessionMonitor();
   },
   
   ensureAdminExists() {
@@ -1170,40 +1172,72 @@ const AuthSystem = {
   
   getSession() {
     try {
-      return JSON.parse(sessionStorage.getItem(this.SESSION_KEY));
+      return JSON.parse(localStorage.getItem(this.SESSION_KEY));
     } catch { return null; }
   },
   
   saveSession(user) {
-    sessionStorage.setItem(this.SESSION_KEY, JSON.stringify({
+    const sessionData = {
       username: user.username,
       role: user.role,
-      loginTime: Date.now()
-    }));
+      loginTime: Date.now(),
+      sessionId: Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    };
+    localStorage.setItem(this.SESSION_KEY, JSON.stringify(sessionData));
+    localStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(sessionData));
   },
   
   clearSession() {
-    sessionStorage.removeItem(this.SESSION_KEY);
+    const currentSession = this.getSession();
+    const activeSession = this.getActiveSession();
+    if (currentSession && activeSession && currentSession.sessionId === activeSession.sessionId) {
+      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+    }
+    localStorage.removeItem(this.SESSION_KEY);
   },
   
-  checkSession() {
-    const session = this.getSession();
-    if (!session) {
-      this.showLogin();
-      return;
+  getActiveSession() {
+    try {
+      return JSON.parse(localStorage.getItem(this.ACTIVE_SESSION_KEY));
+    } catch { return null; }
+  },
+  
+  forceLogoutOtherSessions(username) {
+    const activeSession = this.getActiveSession();
+    if (activeSession && activeSession.username !== username) {
+      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
     }
-    const users = this.getUsers();
-    const user = users.find(u => u.username === session.username);
-    if (!user) {
-      this.clearSession();
-      this.showLogin();
-      return;
-    }
-    if (!this.isLicenseValid(user)) {
-      this.showLogin('授权已过期，请联系管理员续期');
-      return;
-    }
-    this.showApp(user);
+  },
+  
+  isCurrentSessionActive() {
+    const currentSession = this.getSession();
+    const activeSession = this.getActiveSession();
+    if (!currentSession || !activeSession) return false;
+    return currentSession.sessionId === activeSession.sessionId;
+  },
+  
+  startSessionMonitor() {
+    const self = this;
+    window.addEventListener('storage', function(e) {
+      if (e.key === self.ACTIVE_SESSION_KEY) {
+        const activeSession = self.getActiveSession();
+        const currentSession = self.getSession();
+        if (currentSession && (!activeSession || activeSession.username !== currentSession.username)) {
+          self.clearSession();
+          self.showLogin('您的账号已在其他地方登录，已被强制退出');
+        }
+      }
+    });
+    
+    setInterval(function() {
+      if (!self.isCurrentSessionActive()) {
+        const session = self.getSession();
+        if (session) {
+          self.clearSession();
+          self.showLogin('您的账号已在其他地方登录，已被强制退出');
+        }
+      }
+    }, 3000);
   },
   
   isLicenseValid(user) {
@@ -1230,6 +1264,7 @@ const AuthSystem = {
     if (user.role !== 'admin' && !this.isLicenseValid(user)) {
       return { success: false, message: '授权已过期，请联系管理员续期' };
     }
+    this.forceLogoutOtherSessions(username);
     this.saveSession(user);
     return { success: true, user };
   },
