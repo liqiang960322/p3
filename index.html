@@ -886,6 +886,14 @@ textarea.data-input:focus { border-color: var(--cyan); }
 .login-footer span:hover {
   opacity: 0.7;
 }
+#mainApp {
+  display: none !important;
+}
+
+#mainApp.logged-in {
+  display: block !important;
+}
+
 </style>
 </head>
 <body>
@@ -1302,7 +1310,7 @@ const AuthSystem = {
   
   logout() {
     this.clearSession();
-    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('mainApp').classList.remove('logged-in');
     document.getElementById('userInfoBar').style.display = 'none';
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('loginUsername').value = '';
@@ -1355,7 +1363,7 @@ const AuthSystem = {
   
   showLogin(errorMsg) {
     document.getElementById('loginOverlay').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('mainApp').classList.remove('logged-in');
     document.getElementById('userInfoBar').style.display = 'none';
     if (errorMsg) {
       const errEl = document.getElementById('loginError');
@@ -1366,7 +1374,7 @@ const AuthSystem = {
   
   showApp(user) {
     document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('mainApp').classList.add('logged-in');
     document.getElementById('userInfoBar').style.display = 'flex';
     document.getElementById('currentUserName').textContent = user.username;
     document.getElementById('currentUserLicense').textContent = this.getLicenseDisplay(user);
