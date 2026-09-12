@@ -15,7 +15,6 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <title>排列3 历史数据统计分析系统</title>
 <style>
 :root {
@@ -1209,173 +1208,178 @@ textarea.data-input:focus { border-color: var(--cyan); }
 </div> <!-- 关闭 mainApp -->
 
 <script>
-// ===== Supabase 配置 =====
-const SUPABASE_URL = 'https://kkidscwxhzjkahecbwjo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraWRzY3d4aHpqa2FoZWNid2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMTUxMzksImV4cCI6MjEwNDc5MTEzOX0.U5vXNIpfVTDZacvFo1dirRBJv9bVJ7wanxEXNQER7cA';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ===== 登录系统（Supabase）=====
+// ===== 登录系统和管理员功能 =====
 const AuthSystem = {
-  currentUser: null,
-  currentProfile: null,
-  _suppressAuthListener: false,
+  STORAGE_KEY: 'p3_users',
+  SESSION_KEY: 'p3_session',
+  ACTIVE_SESSION_KEY: 'p3_active_session',
   
-  async init() {
-    console.log('AuthSystem.init() called');
+  init() {
+    this.ensureAdminExists();
+    this.migrateUsers();
     this.showLogin();
     this.bindEvents();
-    console.log('bindEvents() completed');
-    // 检查是否已有登录会话
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      console.log('Existing session found');
-      await this.loadUserProfile(session.user.id);
-      if (this.currentProfile) {
-        this.showApp(this.currentProfile);
-      }
-    } else {
-      console.log('No existing session');
-    }
-    // 监听认证状态变化
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (this._suppressAuthListener) return;
-      if (event === 'SIGNED_IN' && session) {
-        this.loadUserProfile(session.user.id).then(() => {
-          if (this.currentProfile) this.showApp(this.currentProfile);
-        });
-      } else if (event === 'SIGNED_OUT') {
-        this.currentUser = null;
-        this.currentProfile = null;
+    this.startSessionMonitor();
+  },
+  
+  migrateUsers() {
+    const users = this.getUsers();
+    let changed = false;
+    users.forEach(u => {
+      if (u.licenseType === 'none') {
+        u.licenseType = 'permanent';
+        changed = true;
       }
     });
+    if (changed) this.saveUsers(users);
   },
   
-  async loadUserProfile(userId) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.error('加载用户信息失败:', error);
-      return;
+  ensureAdminExists() {
+    const users = this.getUsers();
+    if (!users.find(u => u.username === 'admin')) {
+      users.push({
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin',
+        licenseType: 'permanent',
+        licenseExpiry: null,
+        createdAt: Date.now()
+      });
+      this.saveUsers(users);
     }
-    this.currentProfile = data;
   },
   
-  isLicenseValid(profile) {
-    if (!profile) return false;
-    if (profile.role === 'admin') return true;
-    if (profile.license_type === 'permanent') return true;
-    if (!profile.license_expiry) return false;
-    return Date.now() < new Date(profile.license_expiry).getTime();
+  getUsers() {
+    try {
+      return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || [];
+    } catch { return []; }
   },
   
-  getLicenseDisplay(profile) {
-    if (!profile) return '未授权';
-    if (profile.role === 'admin') return '管理员';
-    if (profile.license_type === 'permanent') return '永久授权';
-    if (!profile.license_expiry) return '未授权';
+  saveUsers(users) {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
+  },
+  
+  getSession() {
+    try {
+      return JSON.parse(localStorage.getItem(this.SESSION_KEY));
+    } catch { return null; }
+  },
+  
+  saveSession(user) {
+    const sessionData = {
+      username: user.username,
+      role: user.role,
+      loginTime: Date.now(),
+      sessionId: Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    };
+    localStorage.setItem(this.SESSION_KEY, JSON.stringify(sessionData));
+    localStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(sessionData));
+  },
+  
+  clearSession() {
+    const currentSession = this.getSession();
+    const activeSession = this.getActiveSession();
+    if (currentSession && activeSession && currentSession.sessionId === activeSession.sessionId) {
+      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+    }
+    localStorage.removeItem(this.SESSION_KEY);
+  },
+  
+  getActiveSession() {
+    try {
+      return JSON.parse(localStorage.getItem(this.ACTIVE_SESSION_KEY));
+    } catch { return null; }
+  },
+  
+  forceLogoutOtherSessions(username) {
+    const activeSession = this.getActiveSession();
+    if (activeSession && activeSession.username !== username) {
+      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+    }
+  },
+  
+  isCurrentSessionActive() {
+    const currentSession = this.getSession();
+    const activeSession = this.getActiveSession();
+    if (!currentSession || !activeSession) return false;
+    return currentSession.sessionId === activeSession.sessionId;
+  },
+  
+  startSessionMonitor() {
+    const self = this;
+    window.addEventListener('storage', function(e) {
+      if (e.key === self.ACTIVE_SESSION_KEY) {
+        const activeSession = self.getActiveSession();
+        const currentSession = self.getSession();
+        if (currentSession && (!activeSession || activeSession.username !== currentSession.username)) {
+          self.clearSession();
+          self.showLogin('您的账号已在其他地方登录，已被强制退出');
+        }
+      }
+    });
+    
+    setInterval(function() {
+      if (!self.isCurrentSessionActive()) {
+        const session = self.getSession();
+        if (session) {
+          self.clearSession();
+          self.showLogin('您的账号已在其他地方登录，已被强制退出');
+        }
+      }
+    }, 3000);
+  },
+  
+  isLicenseValid(user) {
+    if (user.role === 'admin') return true;
+    if (user.licenseType === 'permanent') return true;
+    if (!user.licenseExpiry) return false;
+    return Date.now() < user.licenseExpiry;
+  },
+  
+  getLicenseDisplay(user) {
+    if (user.role === 'admin') return '管理员';
+    if (user.licenseType === 'permanent') return '永久授权';
+    if (!user.licenseExpiry) return '未授权';
     const now = Date.now();
-    const expiry = new Date(profile.license_expiry).getTime();
-    if (now >= expiry) return '已过期';
-    const days = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+    if (now >= user.licenseExpiry) return '已过期';
+    const days = Math.ceil((user.licenseExpiry - now) / (1000 * 60 * 60 * 24));
     return `剩余 ${days} 天`;
   },
   
-  async login(username, password) {
-    console.log('login() called with username:', username);
-    try {
-      // 使用邮箱登录（用户名作为邮箱前缀）
-      const email = username + '@p3app.com';
-      console.log('Email:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-      if (error) {
-        console.error('Login error:', error);
-        if (error.message.includes('Invalid login credentials')) {
-          return { success: false, message: '用户名或密码错误' };
-        }
-        return { success: false, message: error.message };
-      }
-      console.log('Login successful, user ID:', data.user.id);
-      // 加载用户信息
-      await this.loadUserProfile(data.user.id);
-      if (!this.currentProfile) {
-        return { success: false, message: '用户信息不存在' };
-      }
-      if (this.currentProfile.role === 'admin') {
-        this._adminPassword = password;
-      }
-      if (!this.isLicenseValid(this.currentProfile)) {
-        await supabase.auth.signOut();
-        return { success: false, message: '授权已过期，请联系管理员续期' };
-      }
-      console.log('Login complete, profile:', this.currentProfile);
-      return { success: true, profile: this.currentProfile };
-    } catch (err) {
-      console.error('Login exception:', err);
-      return { success: false, message: '登录失败：' + err.message };
+  login(username, password) {
+    const users = this.getUsers();
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) return { success: false, message: '用户名或密码错误' };
+    if (user.role !== 'admin' && !this.isLicenseValid(user)) {
+      return { success: false, message: '授权已过期，请联系管理员续期' };
     }
+    this.forceLogoutOtherSessions(username);
+    this.saveSession(user);
+    return { success: true, user };
   },
   
-  async register(username, password) {
-    try {
-      if (!username || !password) return { success: false, message: '用户名和密码不能为空' };
-      if (username.length < 2) return { success: false, message: '用户名至少需要2个字符' };
-      if (password.length < 4) return { success: false, message: '密码至少需要4个字符' };
-      
-      // 检查用户名是否已存在
-      const { data: existing } = await supabase
-        .from('user_profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
-      if (existing) {
-        return { success: false, message: '用户名已存在' };
-      }
-      
-      // 创建 Supabase 认证用户
-      const email = username + '@p3app.com';
-      const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password
-      });
-      if (error) {
-        if (error.message.includes('already registered')) {
-          return { success: false, message: '用户名已存在' };
-        }
-        return { success: false, message: error.message };
-      }
-      
-      // 创建用户信息记录
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          username: username,
-          role: 'user',
-          license_type: 'permanent',
-          license_expiry: null
-        });
-      
-      if (profileError) {
-        console.error('创建用户信息失败:', profileError);
-        return { success: false, message: '注册失败，请稍后重试' };
-      }
-      
-      return { success: true, message: '注册成功，请登录' };
-    } catch (err) {
-      return { success: false, message: '注册失败：' + err.message };
+  register(username, password) {
+    if (!username || !password) return { success: false, message: '用户名和密码不能为空' };
+    if (username.length < 2) return { success: false, message: '用户名至少需要2个字符' };
+    if (password.length < 4) return { success: false, message: '密码至少需要4个字符' };
+    const users = this.getUsers();
+    if (users.find(u => u.username === username)) {
+      return { success: false, message: '用户名已存在' };
     }
+    users.push({
+      username,
+      password,
+      role: 'user',
+      licenseType: 'permanent',
+      licenseExpiry: null,
+      createdAt: Date.now()
+    });
+    this.saveUsers(users);
+    return { success: true, message: '注册成功，请登录' };
   },
   
-  async logout() {
-    await supabase.auth.signOut();
-    this.currentUser = null;
-    this.currentProfile = null;
+  logout() {
+    this.clearSession();
     document.getElementById('mainApp').classList.remove('logged-in');
     document.getElementById('userInfoBar').style.display = 'none';
     document.getElementById('loginOverlay').style.display = 'flex';
@@ -1384,165 +1388,47 @@ const AuthSystem = {
     document.getElementById('loginError').classList.remove('show');
   },
   
-  async addUser(username, password) {
-    try {
-      if (!username || !password) return { success: false, message: '用户名和密码不能为空' };
-      
-      // 检查用户名是否已存在
-      const { data: existing } = await supabase
-        .from('user_profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
-      if (existing) {
-        return { success: false, message: '用户名已存在' };
-      }
-      
-      // 保存管理员会话信息
-      const { data: { session: adminSession } } = await supabase.auth.getSession();
-      if (!adminSession) return { success: false, message: '管理员会话已过期，请重新登录' };
-      
-      this._suppressAuthListener = true;
-      
-      try {
-        // 临时退出管理员账号
-        await supabase.auth.signOut();
-        
-        // 用普通注册方式创建新用户
-        const email = username + '@p3app.com';
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: email,
-          password: password
-        });
-        
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            return { success: false, message: '用户名已存在' };
-          }
-          return { success: false, message: signUpError.message };
-        }
-        
-        // 创建用户信息记录
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: signUpData.user.id,
-            username: username,
-            role: 'user',
-            license_type: 'permanent',
-            license_expiry: null
-          });
-        
-        if (profileError) {
-          return { success: false, message: '创建用户信息失败: ' + profileError.message };
-        }
-        
-        // 退出新用户
-        await supabase.auth.signOut();
-        
-        // 恢复管理员登录
-        const { error: reloginError } = await supabase.auth.signInWithPassword({
-          email: adminSession.user.email,
-          password: this._adminPassword
-        });
-        
-        if (reloginError) {
-          return { success: true, message: '用户已创建，但管理员需要重新登录' };
-        }
-        
-        return { success: true };
-      } finally {
-        this._suppressAuthListener = false;
-      }
-    } catch (err) {
-      this._suppressAuthListener = false;
-      return { success: false, message: err.message };
+  addUser(username, password) {
+    if (!username || !password) return { success: false, message: '用户名和密码不能为空' };
+    const users = this.getUsers();
+    if (users.find(u => u.username === username)) {
+      return { success: false, message: '用户名已存在' };
     }
+    users.push({
+      username,
+      password,
+      role: 'user',
+      licenseType: 'permanent',
+      licenseExpiry: null,
+      createdAt: Date.now()
+    });
+    this.saveUsers(users);
+    return { success: true };
   },
   
-  async deleteUser(username) {
-    try {
-      if (username === 'admin') return { success: false, message: '不能删除管理员账号' };
-      
-      // 获取用户信息
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', username)
-        .single();
-      
-      if (!profile) {
-        return { success: false, message: '用户不存在' };
-      }
-      
-      // 删除用户信息（会级联删除认证用户）
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', profile.id);
-      
-      if (error) {
-        return { success: false, message: error.message };
-      }
-      
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.message };
-    }
+  deleteUser(username) {
+    if (username === 'admin') return { success: false, message: '不能删除管理员账号' };
+    const users = this.getUsers();
+    const idx = users.findIndex(u => u.username === username);
+    if (idx === -1) return { success: false, message: '用户不存在' };
+    users.splice(idx, 1);
+    this.saveUsers(users);
+    return { success: true };
   },
   
-  async setLicense(username, days) {
-    try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', username)
-        .single();
-      
-      if (!profile) {
-        return { success: false, message: '用户不存在' };
-      }
-      
-      let updateData = {};
-      if (days === 0) {
-        updateData = { license_type: 'permanent', license_expiry: null };
-      } else {
-        const expiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        updateData = { license_type: 'timed', license_expiry: expiry };
-      }
-      
-      const { error } = await supabase
-        .from('user_profiles')
-        .update(updateData)
-        .eq('id', profile.id);
-      
-      if (error) {
-        return { success: false, message: error.message };
-      }
-      
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.message };
+  setLicense(username, days) {
+    const users = this.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) return { success: false, message: '用户不存在' };
+    if (days === 0) {
+      user.licenseType = 'permanent';
+      user.licenseExpiry = null;
+    } else {
+      user.licenseType = 'timed';
+      user.licenseExpiry = Date.now() + days * 24 * 60 * 60 * 1000;
     }
-  },
-  
-  async getAllUsers() {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('获取用户列表失败:', error);
-        return [];
-      }
-      
-      return data || [];
-    } catch (err) {
-      console.error('获取用户列表失败:', err);
-      return [];
-    }
+    this.saveUsers(users);
+    return { success: true };
   },
   
   showLogin(errorMsg) {
@@ -1556,13 +1442,13 @@ const AuthSystem = {
     }
   },
   
-  showApp(profile) {
+  showApp(user) {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('mainApp').classList.add('logged-in');
     document.getElementById('userInfoBar').style.display = 'flex';
-    document.getElementById('currentUserName').textContent = profile.username;
-    document.getElementById('currentUserLicense').textContent = this.getLicenseDisplay(profile);
-    if (profile.role === 'admin') {
+    document.getElementById('currentUserName').textContent = user.username;
+    document.getElementById('currentUserLicense').textContent = this.getLicenseDisplay(user);
+    if (user.role === 'admin') {
       document.getElementById('adminPanelBtn').style.display = 'inline-block';
     }
   },
@@ -1570,28 +1456,17 @@ const AuthSystem = {
   bindEvents() {
     const self = this;
     
-    console.log('bindEvents() called');
-    document.getElementById('loginBtn').onclick = async function() {
-      console.log('Login button clicked');
+    document.getElementById('loginBtn').onclick = function() {
       const username = document.getElementById('loginUsername').value.trim();
       const password = document.getElementById('loginPassword').value;
-      console.log('Username:', username, 'Password length:', password.length);
-      const btn = this;
-      btn.disabled = true;
-      btn.textContent = '登录中...';
-      
-      const result = await self.login(username, password);
-      console.log('Login result:', result);
+      const result = self.login(username, password);
       if (result.success) {
-        self.showApp(result.profile);
+        self.showApp(result.user);
       } else {
         const errEl = document.getElementById('loginError');
         errEl.textContent = result.message;
         errEl.classList.add('show');
       }
-      
-      btn.disabled = false;
-      btn.textContent = '登 录';
     };
     
     document.getElementById('loginPassword').onkeydown = function(e) {
@@ -1610,7 +1485,7 @@ const AuthSystem = {
       document.getElementById('loginError').classList.remove('show');
     };
     
-    document.getElementById('registerBtn').onclick = async function() {
+    document.getElementById('registerBtn').onclick = function() {
       const username = document.getElementById('registerUsername').value.trim();
       const password = document.getElementById('registerPassword').value;
       const confirmPassword = document.getElementById('registerConfirmPassword').value;
@@ -1622,11 +1497,7 @@ const AuthSystem = {
         return;
       }
       
-      const btn = this;
-      btn.disabled = true;
-      btn.textContent = '注册中...';
-      
-      const result = await self.register(username, password);
+      const result = self.register(username, password);
       if (result.success) {
         document.getElementById('registerUsername').value = '';
         document.getElementById('registerPassword').value = '';
@@ -1641,9 +1512,6 @@ const AuthSystem = {
         errEl.textContent = result.message;
         errEl.classList.add('show');
       }
-      
-      btn.disabled = false;
-      btn.textContent = '注 册';
     };
     
     document.getElementById('registerConfirmPassword').onkeydown = function(e) {
@@ -1662,52 +1530,36 @@ const AuthSystem = {
       document.getElementById('adminModal').classList.remove('show');
     };
     
-    document.getElementById('addUserBtn').onclick = async function() {
+    document.getElementById('addUserBtn').onclick = function() {
       const username = document.getElementById('newUsername').value.trim();
       const password = document.getElementById('newPassword').value.trim();
-      
-      const btn = this;
-      btn.disabled = true;
-      btn.textContent = '添加中...';
-      
-      const result = await self.addUser(username, password);
+      const result = self.addUser(username, password);
       if (result.success) {
         document.getElementById('newUsername').value = '';
         document.getElementById('newPassword').value = '';
-        await self.refreshUserTable();
+        self.refreshUserTable();
         alert('用户添加成功');
       } else {
         alert(result.message);
       }
-      
-      btn.disabled = false;
-      btn.textContent = '添加用户';
     };
     
     document.getElementById('licenseCancelBtn').onclick = function() {
       document.getElementById('licenseEditModal').classList.remove('show');
     };
     
-    document.getElementById('licenseSaveBtn').onclick = async function() {
+    document.getElementById('licenseSaveBtn').onclick = function() {
       const selected = document.querySelector('.license-option.selected');
       if (!selected) { alert('请选择授权时长'); return; }
       const days = parseInt(selected.dataset.days);
       const username = document.getElementById('licenseEditUser').textContent;
-      
-      const btn = this;
-      btn.disabled = true;
-      btn.textContent = '保存中...';
-      
-      const result = await self.setLicense(username, days);
+      const result = self.setLicense(username, days);
       if (result.success) {
         document.getElementById('licenseEditModal').classList.remove('show');
-        await self.refreshUserTable();
+        self.refreshUserTable();
       } else {
         alert(result.message);
       }
-      
-      btn.disabled = false;
-      btn.textContent = '保存';
     };
     
     document.querySelectorAll('.license-option').forEach(function(opt) {
@@ -1718,31 +1570,30 @@ const AuthSystem = {
     });
   },
   
-  async showAdminPanel() {
+  showAdminPanel() {
     document.getElementById('adminModal').classList.add('show');
-    await this.refreshUserTable();
+    this.refreshUserTable();
   },
   
-  async refreshUserTable() {
-    const users = await this.getAllUsers();
+  refreshUserTable() {
+    const users = this.getUsers();
     const tbody = document.getElementById('userTableBody');
     const self = this;
     tbody.innerHTML = '';
-    
     users.forEach(function(user) {
       const tr = document.createElement('tr');
       const isValid = self.isLicenseValid(user);
       const display = self.getLicenseDisplay(user);
       let badgeClass = 'license-expired';
       if (user.role === 'admin') badgeClass = 'license-permanent';
-      else if (user.license_type === 'permanent') badgeClass = 'license-permanent';
+      else if (user.licenseType === 'permanent') badgeClass = 'license-permanent';
       else if (isValid) badgeClass = 'license-active';
       
       let expiryText = '-';
       if (user.role === 'admin') expiryText = '永久';
-      else if (user.license_type === 'permanent') expiryText = '永久';
-      else if (user.license_expiry) {
-        const d = new Date(user.license_expiry);
+      else if (user.licenseType === 'permanent') expiryText = '永久';
+      else if (user.licenseExpiry) {
+        const d = new Date(user.licenseExpiry);
         expiryText = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
       }
       
@@ -1766,12 +1617,12 @@ const AuthSystem = {
     });
     
     tbody.querySelectorAll('.admin-btn-delete').forEach(function(btn) {
-      btn.onclick = async function() {
+      btn.onclick = function() {
         const username = btn.dataset.user;
         if (confirm('确定要删除用户 ' + username + ' 吗？')) {
-          const result = await self.deleteUser(username);
+          const result = self.deleteUser(username);
           if (result.success) {
-            await self.refreshUserTable();
+            self.refreshUserTable();
           } else {
             alert(result.message);
           }
