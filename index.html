@@ -1722,15 +1722,16 @@ const AuthSystem = {
   }
 };
 
-AuthSystem.init();
-
-// Hide main app and show login overlay initially
-(function(){
+// Ensure DOM is fully loaded before initializing
+document.addEventListener('DOMContentLoaded', function() {
+  AuthSystem.init();
+  
+  // Hide main app and show login overlay initially
   var mainApp = document.getElementById('mainApp');
   var loginOverlay = document.getElementById('loginOverlay');
   if (mainApp) mainApp.style.display = 'none';
   if (loginOverlay) loginOverlay.style.display = 'flex';
-})();
+});
 
 // ===== 全局数据 =====
 let history = []; // [{period:'2024232', num:'387', d:[3,8,7]}, ...]
@@ -2519,7 +2520,7 @@ const ExpertData = {
 
         html += '<div class="expert-list">';
         issueGroup.pageData.forEach(scheme => {
-          html += '<div class="scheme-card" onclick="ExpertData.showDetail(' + scheme.expertId + ', &apos;' + scheme.name.replace(/'/g, "&apos;") + '&apos;)" style="cursor:pointer;">';
+          html += '<div class="scheme-card" onclick="ExpertData.showDetail(' + scheme.expertId + ', \'' + scheme.name.replace(/'/g, "\'") + \'')" style="cursor:pointer;">';
           html += '<div class="scheme-header">';
           html += '<div class="scheme-title">' + scheme.name + ' (' + scheme.gradeName + ')</div>';
           html += '<div class="scheme-time">' + scheme.releaseTime + '</div>';
