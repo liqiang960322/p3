@@ -1,6 +1,6 @@
-const CACHE_NAME = 'p3-app-v3';
+const CACHE_NAME = 'p3-app-v2';
 const ASSETS = [
-  '/index.html',
+  '/排列3预测分析系统.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -42,7 +42,7 @@ self.addEventListener('fetch', function(e) {
         }
         return resp;
       }).catch(function() {
-        return caches.match('/index.html');
+        return caches.match('/排列3预测分析系统.html');
       });
     })
   );
