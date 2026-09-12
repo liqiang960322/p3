@@ -1281,7 +1281,7 @@ const AuthSystem = {
   async login(username, password) {
     try {
       // 使用邮箱登录（用户名作为邮箱前缀）
-      const email = username + '@p3.local';
+      const email = username + '@p3app.com';
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
@@ -1327,7 +1327,7 @@ const AuthSystem = {
       }
       
       // 创建 Supabase 认证用户
-      const email = username + '@p3.local';
+      const email = username + '@p3app.com';
       const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password
@@ -1398,7 +1398,7 @@ const AuthSystem = {
         await supabase.auth.signOut();
         
         // 用普通注册方式创建新用户
-        const email = username + '@p3.local';
+        const email = username + '@p3app.com';
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: email,
           password: password
