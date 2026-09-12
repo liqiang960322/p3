@@ -1216,9 +1216,22 @@ const AuthSystem = {
   
   init() {
     this.ensureAdminExists();
+    this.migrateUsers();
     this.showLogin();
     this.bindEvents();
     this.startSessionMonitor();
+  },
+  
+  migrateUsers() {
+    const users = this.getUsers();
+    let changed = false;
+    users.forEach(u => {
+      if (u.licenseType === 'none') {
+        u.licenseType = 'permanent';
+        changed = true;
+      }
+    });
+    if (changed) this.saveUsers(users);
   },
   
   ensureAdminExists() {
@@ -1357,7 +1370,7 @@ const AuthSystem = {
       username,
       password,
       role: 'user',
-      licenseType: 'none',
+      licenseType: 'permanent',
       licenseExpiry: null,
       createdAt: Date.now()
     });
@@ -1385,7 +1398,7 @@ const AuthSystem = {
       username,
       password,
       role: 'user',
-      licenseType: 'none',
+      licenseType: 'permanent',
       licenseExpiry: null,
       createdAt: Date.now()
     });
