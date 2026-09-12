@@ -1,4 +1,4 @@
-const CACHE_NAME = 'p3-app-v3-dom-fix';
+const CACHE_NAME = 'p3-app-v4-no-auth';
 const ASSETS = [
   '/排列3预测分析系统.html',
   '/manifest.json',
